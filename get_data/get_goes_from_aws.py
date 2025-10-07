@@ -6,6 +6,11 @@ import numpy as np
 import s3fs
 
 
+import warnings
+warnings.filterwarnings("ignore")
+
+
+
 def download_goes_file(year, day_of_year, hour, output_filename=None):
     fs = s3fs.S3FileSystem(anon=True)
 

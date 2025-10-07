@@ -104,7 +104,7 @@ def get_metar_data(date=datetime.utcnow(), reduced_to=100000):
     data['cloud_coverage'] = np.array(obs['skyCover'])
 
     if len(METAR_u) > 0:
-        print('    METAR DATA LOADED.....{time_title}')
+        print(f'    METAR DATA LOADED.....{time_title}')
 
     data_df = pd.DataFrame.from_dict(data)
     proj = ccrs.LambertConformal()
