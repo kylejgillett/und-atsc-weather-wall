@@ -195,7 +195,7 @@ for outlook, outlook_day in zip(outlooks, range(1,4)):
     imgax.axis('off')
 
 
-    plt.savefig(f"staged_figures/middle_2_2_spc-d{outlook_day}outlook.png", bbox_inches="tight")
+    plt.savefig(f"staged_figures/conus_spc_outlooks/spc-d{outlook_day}outlook.png", bbox_inches="tight")
 
 
 elapsed_time = comp_time.time() - st

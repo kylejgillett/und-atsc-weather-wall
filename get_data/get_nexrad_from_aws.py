@@ -29,7 +29,7 @@ def get_radar(date=datetime.now(timezone.utc)):
 
     fs = fsspec.filesystem('s3', anon=True)
     # try current time, then fallback to previous hour if needed
-    time_candidates = [curr_dt + timedelta(minutes=delta) for delta in range(-60, 0)]
+    time_candidates = [curr_dt + timedelta(minutes=delta) for delta in range(-120, 0)]
 
     files = []
     for t in time_candidates:

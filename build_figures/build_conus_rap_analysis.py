@@ -83,16 +83,17 @@ valid_date = f'{data_date}'
 
 
 # BASIC DATA EXTRACTION
-ghgt_iso = ndimage.gaussian_filter(raw_data.variables['Geopotential_height_isobaric'][0], sigma=0.75)
-temp_iso = ndimage.gaussian_filter(raw_data.variables['Temperature_isobaric'][0], sigma=0.75) - 273.15
-uwnd_iso = ndimage.gaussian_filter(raw_data.variables['u-component_of_wind_isobaric'][0], sigma=0.75) * 1.94384
-vwnd_iso = ndimage.gaussian_filter(raw_data.variables['v-component_of_wind_isobaric'][0], sigma=0.75) * 1.94384
+sigma = 1.5
+ghgt_iso = ndimage.gaussian_filter(raw_data.variables['Geopotential_height_isobaric'][0], sigma=sigma)
+temp_iso = ndimage.gaussian_filter(raw_data.variables['Temperature_isobaric'][0], sigma=sigma) - 273.15
+uwnd_iso = ndimage.gaussian_filter(raw_data.variables['u-component_of_wind_isobaric'][0], sigma=sigma) * 1.94384
+vwnd_iso = ndimage.gaussian_filter(raw_data.variables['v-component_of_wind_isobaric'][0], sigma=sigma) * 1.94384
 
-pres_sfc = ndimage.gaussian_filter(raw_data.variables['MSLP_MAPS_System_Reduction_msl'][0], sigma=0.75)
-temp_sfc = ndimage.gaussian_filter(raw_data.variables['Temperature_height_above_ground'][0], sigma=0.75) - 273.15
-uwnd_sfc = ndimage.gaussian_filter(raw_data.variables['u-component_of_wind_height_above_ground'][0], sigma=0.75) * 1.94384
-vwnd_sfc = ndimage.gaussian_filter(raw_data.variables['v-component_of_wind_height_above_ground'][0], sigma=0.75) * 1.94384
-relh_sfc = ndimage.gaussian_filter(raw_data.variables['Relative_humidity_height_above_ground'][0], sigma=0.75)
+pres_sfc = ndimage.gaussian_filter(raw_data.variables['MSLP_MAPS_System_Reduction_msl'][0], sigma=sigma)
+temp_sfc = ndimage.gaussian_filter(raw_data.variables['Temperature_height_above_ground'][0], sigma=sigma) - 273.15
+uwnd_sfc = ndimage.gaussian_filter(raw_data.variables['u-component_of_wind_height_above_ground'][0], sigma=sigma) * 1.94384
+vwnd_sfc = ndimage.gaussian_filter(raw_data.variables['v-component_of_wind_height_above_ground'][0], sigma=sigma) * 1.94384
+relh_sfc = ndimage.gaussian_filter(raw_data.variables['Relative_humidity_height_above_ground'][0], sigma=sigma)
 dwpt_sfc = mpcalc.dewpoint_from_relative_humidity(temp_sfc*units.degC, relh_sfc*units.percent)
 
 
@@ -121,7 +122,7 @@ adv = mpcalc.advection(raw_data['Temperature_isobaric'],
 # convert units to delta deg C / hr
 adv = adv.metpy.convert_units('delta_degC/hour')
 # apply some smoothing to adv 
-adv = ndimage.gaussian_filter(adv, sigma=1, order=0) * units('K/sec')
+adv = ndimage.gaussian_filter(adv, sigma=2, order=0) * units('K/sec')
 
 
 # use metpy to compute theta & add it into the `rap-data` DataSet
@@ -301,7 +302,7 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/rap_analysis_maps/rap_300_flow.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_300_flow.png", bbox_inches="tight")
 
 print("    FINISHED 300HPA FLOW MAP")
 #############################################################################################################################################################################
@@ -334,6 +335,7 @@ contour = ax.contour(lons, lats, ghgt_300, np.arange(0, 12000, 60),
 plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
+
 # plot 300hpa pv fill
 contourf = ax.contourf(raw_data['lon'], raw_data['lat'], raw_data['pv'][plev300,0,:,:]*1e6, pv_clevs, cmap=pv_cmap,
                  transform=ccrs.PlateCarree(),extend='both')
@@ -355,6 +357,7 @@ plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 # colorbar for filled contour
 cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
 cbar.set_label(r'Potential Vorticity Units (PVU; $\rm{10^{-6}\ K\ kg^{-1}\ m^{2}\ s^{-1}})$' + ' | 2PVU (dashed)', fontsize=15, color='white')
+
 # add UND logo
 from PIL import Image
 img = Image.open('utils/images/und-logo.png')
@@ -364,7 +367,7 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/rap_analysis_maps/rap_300_pva.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_300_pva.png", bbox_inches="tight")
 
 print("    FINISHED 300HPA PVA MAP")
 #############################################################################################################################################################################
@@ -427,7 +430,7 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/rap_analysis_maps/rap_500_flow.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_500_flow.png", bbox_inches="tight")
 
 print("    FINISHED 500HPA FLOW MAP")
 #############################################################################################################################################################################
@@ -494,7 +497,7 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/rap_analysis_maps/rap_500_relvort.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_500_relvort.png", bbox_inches="tight")
 
 print("    FINISHED 500HPA REL VORT MAP")
 #############################################################################################################################################################################
@@ -554,7 +557,7 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/rap_analysis_maps/rap_500_relvortadv.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_500_relvortadv.png", bbox_inches="tight")
 
 print("    FINISHED 500HPA REL VORT ADV MAP")
 #############################################################################################################################################################################
@@ -622,7 +625,7 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/rap_analysis_maps/rap_850_tempadv.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_850_tempadv.png", bbox_inches="tight")
 
 print("    FINISHED 850HPA TEMP ADV MAP")
 #############################################################################################################################################################################
@@ -701,7 +704,7 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/rap_analysis_maps/rap_850_temp.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_850_temp.png", bbox_inches="tight")
 
 print("    FINISHED 850HPA TEMP MAP")
 #############################################################################################################################################################################
@@ -771,7 +774,7 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/rap_analysis_maps/rap_sfc_analysis.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_sfc_analysis.png", bbox_inches="tight")
 
 print("    FINISHED SFC ANL MAP")
 #############################################################################################################################################################################

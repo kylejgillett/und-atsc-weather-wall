@@ -49,9 +49,13 @@ from utils.colormaps import *
 from get_data.get_metars import get_metar_data
 from get_data.get_nexrad_from_aws import get_radar
 
-
-# get nexrad data
-radar_data, radar_scan_string = get_radar()
+try:
+    # get nexrad data
+    radar_data, radar_scan_string = get_radar()
+    got_radar_data = True
+except: 
+    got_radar_data = False
+    pass
 
 
 
@@ -173,7 +177,7 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/left_1_1.png", bbox_inches="tight")
+plt.savefig("staged_figures/local_nexrad_analysis/local_nexrad_analysis.png", bbox_inches="tight")
 
 elapsed_time = comp_time.time() - st
 print(f"############\nSCRIPT FINISHED: time: {comp_time.strftime("%H:%M:%S", comp_time.gmtime(elapsed_time))}\n############")

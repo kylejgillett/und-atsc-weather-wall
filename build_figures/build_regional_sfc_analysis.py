@@ -267,7 +267,7 @@ imgax.imshow(img)
 imgax.axis('off')
 
 
-plt.savefig("staged_figures/left_1_2.png", bbox_inches="tight")
+plt.savefig("staged_figures/regional_surface_analysis/regional_rap_analysis.png", bbox_inches="tight")
 
 
 elapsed_time = comp_time.time() - st
