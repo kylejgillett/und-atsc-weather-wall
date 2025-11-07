@@ -36,7 +36,6 @@ import matplotlib
 
 # get script dir
 script_dir = os.path.dirname(os.path.abspath(__file__))
-print("script_dir:", script_dir)
 
 # get the parent dir 
 project_root = os.path.abspath(os.path.join(script_dir, ".."))
@@ -108,6 +107,11 @@ fig, ax = build_map(extent=[center_lon-box_size, center_lon+box_size, center_lat
 ###################################################################
 # METAR STATION PLOTS
 ###################################################################
+from metpy.plots import StationPlot, StationPlotLayout, sky_cover
+from matplotlib.patheffects import withStroke
+TEXT_OUTLINE = [withStroke(linewidth=3, foreground=(0, 0, 0, 0.3))]
+BARB_OUTLINE = [withStroke(linewidth=4, foreground=(0, 0, 0, 0.5))]
+
 metar_obs, metar_time = get_metar_data(reduced_to=0)
 filtered_metars = metar_obs[
     (metar_obs['latitude'] >= center_lat - box_size*2) & (metar_obs['latitude'] <= center_lat + box_size*2) &
@@ -115,12 +119,11 @@ filtered_metars = metar_obs[
 filtered_metars['air_temperature'] = (filtered_metars['air_temperature']* 9/5) + 32
 filtered_metars['dew_point_temperature'] = (filtered_metars['dew_point_temperature']* 9/5) + 32
 
-from metpy.plots import StationPlot, StationPlotLayout, sky_cover
 custom_layout = StationPlotLayout()
-custom_layout.add_barb('eastward_wind', 'northward_wind', units='knots')
-custom_layout.add_value('NW', 'air_temperature', fmt='.0f', color='white')
-custom_layout.add_value('SW', 'dew_point_temperature', fmt='.0f', color='white')
-custom_layout.add_symbol('C', 'cloud_coverage', sky_cover)
+custom_layout.add_barb('eastward_wind', 'northward_wind', units='knots', path_effects=BARB_OUTLINE)
+custom_layout.add_value('NW', 'air_temperature', fmt='.0f', color='orangered', fontweight='bold', path_effects=TEXT_OUTLINE)
+custom_layout.add_value('SW', 'dew_point_temperature', fmt='.0f', color='palegreen', fontweight='bold', path_effects=TEXT_OUTLINE)
+custom_layout.add_symbol('C', 'cloud_coverage', sky_cover, path_effects=TEXT_OUTLINE)
 stationplot = StationPlot(ax, filtered_metars['longitude'], filtered_metars['latitude'], clip_on=True,
                           transform=ccrs.PlateCarree(), fontsize=11, zorder=12, alpha=1, color='white')
 #stationplot.plot_text((1, -3), filtered_metars['stid'], color='white')

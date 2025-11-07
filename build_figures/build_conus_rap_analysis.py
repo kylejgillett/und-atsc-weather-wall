@@ -161,6 +161,8 @@ radar_data, radar_lat, radar_lon, radar_time = get_latest_mosaic(utc_now[0], utc
 
 # get metar data
 metar_obs, metar_time = get_metar_data(reduced_to=120000)
+metar_obs['air_temperature'] = (metar_obs['air_temperature']* 9/5) + 32
+metar_obs['dew_point_temperature'] = (metar_obs['dew_point_temperature']* 9/5) + 32
 
 # get satellite data
 output_filename = download_goes_file(utc_now[0],utc_now[4],utc_now[3],None)
@@ -237,10 +239,10 @@ def build_map(extent=[-122, -73, 21, 56], projection=ccrs.LambertConformal(), st
         color = 'black'
         alpha = 0.8
 
-    ax.add_feature(cfeature.STATES, edgecolor='navy', alpha=0.5, linestyle='-', linewidth=1, zorder=10)
+    ax.add_feature(cfeature.STATES, edgecolor='black', alpha=0.5, linestyle='-', linewidth=1, zorder=10)
     ax.add_feature(cfeature.LAND, facecolor=color, alpha=alpha, zorder=1)
     ax.add_feature(cfeature.OCEAN, facecolor=color, alpha=alpha + 0.2, zorder=0)
-    ax.add_feature(cfeature.COASTLINE, color='navy', alpha=0.5, linestyle='-', linewidth=1, zorder=11)
+    ax.add_feature(cfeature.COASTLINE, color='black', alpha=0.5, linestyle='-', linewidth=1, zorder=11)
 
     plt.tight_layout()
 
@@ -722,14 +724,17 @@ fig, ax = build_map(style='dark')
 
 # add metar plots
 from metpy.plots import StationPlot, StationPlotLayout, sky_cover
+from matplotlib.patheffects import withStroke
+TEXT_OUTLINE = [withStroke(linewidth=1, foreground=(0, 0, 0, 0.3))]
+BARB_OUTLINE = [withStroke(linewidth=2, foreground=(0, 0, 0, 0.5))]
+
 custom_layout = StationPlotLayout()
-custom_layout.add_barb('eastward_wind', 'northward_wind', units='knots')
-custom_layout.add_value('NW', 'air_temperature', fmt='.0f', units='degF', color='darkred')
-#custom_layout.add_value('NE', 'sea_level_pressure', fmt='.0f', units='mb', color='black')
-custom_layout.add_value('SW', 'dew_point_temperature', fmt='.0f', units='degF', color='darkgreen')
-custom_layout.add_symbol('C', 'cloud_coverage', sky_cover)
+custom_layout.add_barb('eastward_wind', 'northward_wind', units='knots', path_effects=BARB_OUTLINE)
+custom_layout.add_value('NW', 'air_temperature', fmt='.0f', fontsize=7, fontweight='bold', color='orangered',  path_effects=TEXT_OUTLINE)
+custom_layout.add_value('SW', 'dew_point_temperature', fmt='.0f', fontsize=7, fontweight='bold', color='palegreen', path_effects=TEXT_OUTLINE)
+custom_layout.add_symbol('C', 'cloud_coverage', sky_cover, path_effects=TEXT_OUTLINE)
 stationplot = StationPlot(ax, metar_obs['longitude'], metar_obs['latitude'], clip_on=True,
-                          transform=ccrs.PlateCarree(), fontsize=8, zorder=12, alpha=1)
+                          transform=ccrs.PlateCarree(), fontsize=8, zorder=12, color='white', alpha=0.8)
 custom_layout.plot(stationplot, metar_obs)
 
 

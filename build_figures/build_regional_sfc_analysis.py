@@ -130,6 +130,8 @@ radar_data, radar_lat, radar_lon, radar_time = get_latest_mosaic(utc_now[0], utc
 
 # get metar data
 metar_obs, metar_time = get_metar_data(reduced_to=50000)
+metar_obs['air_temperature'] = (metar_obs['air_temperature']* 9/5) + 32
+metar_obs['dew_point_temperature'] = (metar_obs['dew_point_temperature']* 9/5) + 32
 
 # get satellite data
 output_filename = download_goes_file(utc_now[0],utc_now[4],utc_now[3],None)
@@ -197,14 +199,17 @@ fig, ax = build_map(style='dark')
 # METAR STATION PLOTS
 ###################################################################
 from metpy.plots import StationPlot, StationPlotLayout, sky_cover
+from matplotlib.patheffects import withStroke
+TEXT_OUTLINE = [withStroke(linewidth=1, foreground=(0, 0, 0, 0.3))]
+BARB_OUTLINE = [withStroke(linewidth=2, foreground=(0, 0, 0, 0.5))]
+
 custom_layout = StationPlotLayout()
-custom_layout.add_barb('eastward_wind', 'northward_wind', units='knots')
-custom_layout.add_value('NW', 'air_temperature', fmt='.0f', units='degF', color='darkred')
-#custom_layout.add_value('NE', 'sea_level_pressure', fmt='.0f', units='mb', color='black')
-custom_layout.add_value('SW', 'dew_point_temperature', fmt='.0f', units='degF', color='darkgreen')
-custom_layout.add_symbol('C', 'cloud_coverage', sky_cover)
+custom_layout.add_barb('eastward_wind', 'northward_wind', units='knots', path_effects=BARB_OUTLINE)
+custom_layout.add_value('NW', 'air_temperature', fmt='.0f', color='orangered', fontweight='bold', path_effects=TEXT_OUTLINE)
+custom_layout.add_value('SW', 'dew_point_temperature', fmt='.0f', color='palegreen', fontweight='bold', path_effects=TEXT_OUTLINE)
+custom_layout.add_symbol('C', 'cloud_coverage', sky_cover, path_effects=TEXT_OUTLINE)
 stationplot = StationPlot(ax, metar_obs['longitude'], metar_obs['latitude'], clip_on=True,
-                          transform=ccrs.PlateCarree(), fontsize=8, zorder=12, alpha=1)
+                          transform=ccrs.PlateCarree(), fontsize=9, zorder=12, color='white', alpha=1)
 custom_layout.plot(stationplot, metar_obs)
 
 
