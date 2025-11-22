@@ -1,3 +1,8 @@
+##########################################################
+#              RAP ANALYSIS FIGURES SCRIPT
+#  (c) KYLE J GILLETT, UNIVERSITY OF NORTH DAKOTA, 2025
+##########################################################
+
 print("############\nSCRIPT RUNNING\n############")
 import time as comp_time
 st = comp_time.time()
@@ -77,8 +82,13 @@ pres_levs = pres_levs / 100
 try:
     data_date = raw_data['time'].values[0]
 except:
-    data_date = raw_data['time1'].values[0]
+    try:
+        print(f'time{i}')
+        data_date = raw_data[f'time{i}'].values[0]
+    except:
+        pass
     pass
+
 valid_date = f'{data_date}'
 
 
@@ -118,7 +128,7 @@ fgen_masked = fgen.where(fgen > (2 * units('delta_degC/km/hour')))
 adv = mpcalc.advection(raw_data['Temperature_isobaric'], 
                        raw_data['u-component_of_wind_isobaric'],
                        raw_data['v-component_of_wind_isobaric'],
-                       latitude=raw_data['lon'].values,longitude=raw_data['lon'].values,crs=ccrs.PlateCarree())
+                       latitude=raw_data['lat'].values,longitude=raw_data['lon'].values,crs=ccrs.PlateCarree())
 # convert units to delta deg C / hr
 adv = adv.metpy.convert_units('delta_degC/hour')
 # apply some smoothing to adv 
@@ -142,6 +152,7 @@ raw_data['pv'] = mpcalc.potential_vorticity_baroclinic(raw_data['theta'],
 thta_on_2pvu = interpolate_to_isosurface(raw_data['pv'].values, raw_data['theta'].values,  2*1e-6, bottom_up_search=True)
 u_on_2pvu    = interpolate_to_isosurface(raw_data['pv'][:,0,:,:].values, raw_data['u-component_of_wind_isobaric'][0,:,:,:].values, 2*1e-6, bottom_up_search=True)
 v_on_2pvu    = interpolate_to_isosurface(raw_data['pv'][:,0,:,:].values, raw_data['v-component_of_wind_isobaric'][0,:,:,:].values, 2*1e-6, bottom_up_search=True)
+
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -160,7 +171,7 @@ v_on_2pvu    = interpolate_to_isosurface(raw_data['pv'][:,0,:,:].values, raw_dat
 radar_data, radar_lat, radar_lon, radar_time = get_latest_mosaic(utc_now[0], utc_now[1], utc_now[2])
 
 # get metar data
-metar_obs, metar_time = get_metar_data(reduced_to=120000)
+metar_obs, metar_time = get_metar_data(reduced_to=100000)
 metar_obs['air_temperature'] = (metar_obs['air_temperature']* 9/5) + 32
 metar_obs['dew_point_temperature'] = (metar_obs['dew_point_temperature']* 9/5) + 32
 
@@ -239,10 +250,10 @@ def build_map(extent=[-122, -73, 21, 56], projection=ccrs.LambertConformal(), st
         color = 'black'
         alpha = 0.8
 
-    ax.add_feature(cfeature.STATES, edgecolor='black', alpha=0.5, linestyle='-', linewidth=1, zorder=10)
+    ax.add_feature(cfeature.STATES, edgecolor='navy', alpha=0.4, linestyle='-', linewidth=3, zorder=10)
     ax.add_feature(cfeature.LAND, facecolor=color, alpha=alpha, zorder=1)
     ax.add_feature(cfeature.OCEAN, facecolor=color, alpha=alpha + 0.2, zorder=0)
-    ax.add_feature(cfeature.COASTLINE, color='black', alpha=0.5, linestyle='-', linewidth=1, zorder=11)
+    ax.add_feature(cfeature.COASTLINE, color='navy', alpha=0.4, linestyle='-', linewidth=3, zorder=11)
 
     plt.tight_layout()
 
@@ -293,7 +304,10 @@ plt.figtext(0.08, 1.00, f'   Heights (m), Wind (kt)', ha='left', fontsize=18, co
 plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 # colorbar for filled contour
 cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-cbar.set_label('Wind Speed (kts)', fontsize=15, color='white')
+cbar.set_label('Wind Speed (kts)', fontsize=15, color='white', fontweight='bold')
+cbar.ax.tick_params(labelcolor='white')
+for t in cbar.ax.get_xticklabels():
+    t.set_fontweight('bold')
 
 # add UND logo
 from PIL import Image
@@ -358,7 +372,11 @@ plt.figtext(0.08, 1.00, f'   Heights (m), Potential Vorticity (PVU), Wind (kt)',
 plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 # colorbar for filled contour
 cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-cbar.set_label(r'Potential Vorticity Units (PVU; $\rm{10^{-6}\ K\ kg^{-1}\ m^{2}\ s^{-1}})$' + ' | 2PVU (dashed)', fontsize=15, color='white')
+cbar.set_label(r'Potential Vorticity Units (PVU; $\rm{10^{-6}\ K\ kg^{-1}\ m^{2}\ s^{-1}})$' + ' | 2PVU (dashed)',  fontsize=15, color='white', fontweight='bold')
+cbar.ax.tick_params(labelcolor='white')
+for t in cbar.ax.get_xticklabels():
+    t.set_fontweight('bold')
+
 
 # add UND logo
 from PIL import Image
@@ -398,6 +416,7 @@ uwnd_500 = uwnd_iso[plev500]
 vwnd_500 = vwnd_iso[plev500]
 wdsp_500 = np.sqrt(uwnd_500**2 + vwnd_500**2)
 
+
 # plot 500 hpa heights
 contour = ax.contour(lons, lats, ghgt_500, np.arange(3000, 7000, 60),
                 colors='black', linewidths=3.0, linestyles='-',
@@ -406,7 +425,7 @@ plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 # plot 500hpa wind speed
-contourf = ax.contourf(lons, lats, wdsp_500, np.arange(40, 140, 10), extend='both',
+contourf = ax.contourf(lons, lats, wdsp_500, np.arange(30, 140, 5), extend='both',
                  cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
 
 # plot 500 hpa wind barbs
@@ -421,7 +440,11 @@ plt.figtext(0.08, 1.00, f'   Heights (m), Wind (kt)', ha='left', fontsize=18, co
 plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 # colorbar for filled contour
 cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-cbar.set_label('Wind Speed (kts)', fontsize=15, color='white')
+cbar.set_label('Wind Speed (kts)',  fontsize=15, color='white', fontweight='bold')
+cbar.ax.tick_params(labelcolor='white')
+for t in cbar.ax.get_xticklabels():
+    t.set_fontweight('bold')
+
 
 # add UND logo
 from PIL import Image
@@ -457,10 +480,12 @@ print("    FINISHED 500HPA FLOW MAP")
 #################################
 fig, ax = build_map()
 
+n_reps = 150
+
 # compute vorticity and vorticity advection
 dx, dy = mpcalc.lat_lon_grid_deltas(lons, lats)
 f = mpcalc.coriolis_parameter(np.deg2rad(lats)).to('1/s')
-vor_500 = mpcalc.vorticity(uwnd_500*units.kts, vwnd_500*units.kts, dx=dx, dy=dy)
+vor_500 = mpcalc.smooth_n_point(mpcalc.vorticity(uwnd_500*units.kts, vwnd_500*units.kts, dx=dx, dy=dy), 9, n_reps)
 avor_500 = vor_500 + f
 
 # plot 500 hpa heights
@@ -472,8 +497,8 @@ plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
 
 # plot relative vorticity fill
 avor_500 = np.where((vor_500.m * 10**5 > -5) & (vor_500.m * 10**5 < 15), np.nan, vor_500)
-norm = mcolors.TwoSlopeNorm(vmin=-40, vcenter=0, vmax=60)
-vort_cf = ax.contourf(lons, lats, vor_500 * 10**5, np.arange(-40, 60, 5), 
+norm = mcolors.TwoSlopeNorm(vmin=-30, vcenter=0, vmax=50)
+vort_cf = ax.contourf(lons, lats, vor_500 * 10**5, np.arange(-30, 52, 2), 
                       norm=norm, extend='both', cmap='PuOr_r', zorder=5, alpha=1, transform=ccrs.PlateCarree())
 
 # plot wind barbs
@@ -488,7 +513,12 @@ plt.figtext(0.08, 1.00, f'   Heights (m), Rel. Vorticity (/sec•10⁵), Wind (k
 plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 # colorbar for filled contour
 cbar = plt.colorbar(vort_cf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-cbar.set_label('Relative Vorticity (/sec•10⁵)', fontsize=15, color='white')
+cbar.set_label('Relative Vorticity (/sec•10⁵)',  fontsize=15, color='white', fontweight='bold')
+cbar.ax.tick_params(labelcolor='white')
+for t in cbar.ax.get_xticklabels():
+    t.set_fontweight('bold')
+
+
 
 # add UND logo
 from PIL import Image
@@ -522,8 +552,8 @@ print("    FINISHED 500HPA REL VORT MAP")
 fig, ax = build_map()
 
 # use 500hpa data and vort calculations from above 
-relvort_adv = mpcalc.advection(vor_500, uwnd_500, vwnd_500, dx=dx, dy=dy)
-absvort_adv = mpcalc.advection(avor_500, uwnd_500, vwnd_500, dx=dx, dy=dy)
+relvort_adv = mpcalc.advection(vor_500, uwnd_500, vwnd_500, dx=dx, dy=dy) *1e9
+absvort_adv = mpcalc.advection(avor_500, uwnd_500, vwnd_500, dx=dx, dy=dy) *1e9
 
 # plot 500hpa heights
 contour = ax.contour(lons, lats, ghgt_500, np.arange(3000, 7000, 60),
@@ -533,7 +563,7 @@ plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 # plot 500hpa abs vort adv fill
-vortadv_cf = ax.contourf(lons, lats, relvort_adv, np.arange(-6*10**-7, 6*10**-7, 2*10**-8),
+vortadv_cf = ax.contourf(lons, lats, ndimage.gaussian_filter(relvort_adv, 4), np.arange(-50, 52, 2),               #np.arange(-6*12**-7, 6*12**-7, 1*10**-9),
                              extend='both', cmap='bwr', zorder=5, alpha=1, transform=ccrs.PlateCarree())
 
 # plot 500hpa wind barbs
@@ -544,11 +574,14 @@ barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every
 
 # plot title, add one to the left with model name and data names, add another to the right with time info
 plt.figtext(0.08, 1.03, f'   RAP 500 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-plt.figtext(0.08, 1.00, f'   Heights (m), Rel. Vorticity Adv. (sec⁻²•10⁷), Wind (kt)', ha='left', fontsize=18, color='white')
+plt.figtext(0.08, 1.00, f'   Heights (m), Rel. Vorticity Adv. (sec⁻²•10⁹), Wind (kt)', ha='left', fontsize=18, color='white')
 plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 # colorbar for filled contour
 cbar = plt.colorbar(vortadv_cf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-cbar.set_label('Relative Vorticity Advection (sec⁻²•10⁷)', fontsize=15, color='white')
+cbar.set_label('Relative Vorticity Advection (sec⁻²•10⁹)',  fontsize=15, color='white', fontweight='bold')
+cbar.ax.tick_params(labelcolor='white')
+for t in cbar.ax.get_xticklabels():
+    t.set_fontweight('bold')
 
 # add UND logo
 from PIL import Image
@@ -595,9 +628,14 @@ contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
 plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
+
+
+n_reps = 80
 # plot 850hpa tadv
-tadv_contourf = ax.contourf(raw_data['lon'], raw_data['lat'], adv[0,plev850,:,:],
-                np.arange(-5,5.25,0.50), cmap='bwr', transform=ccrs.PlateCarree(), zorder=4, extend='both')
+tadv_contourf = ax.contourf(raw_data['lon'], raw_data['lat'], 3*(mpcalc.smooth_n_point(adv[0,plev850,:,:], 9, n_reps)),
+                np.arange(-7,7.25,0.25), cmap='bwr', transform=ccrs.PlateCarree(), zorder=4, extend='both')
+
+ax.contour(lons, lats, temp_850, levels=[0], linewidths=3, linestyles='--', colors='gray', transform=ccrs.PlateCarree(), zorder=5)  
 
 # plot filled contours pf frontogenesis > 2 delta deg C / hr
 fgen_contourf = ax.contour(raw_data['lon'], raw_data['lat'], fgen_masked[0,plev850,:,:], 
@@ -612,11 +650,14 @@ barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every
 
 # plot title, add one to the left with model name and data names, add another to the right with time info
 plt.figtext(0.08, 1.03, f'   RAP 850 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-plt.figtext(0.08, 1.00, f'   Heights (m), Temperature Adv (C/hr), Frontogenesis (>2'+u'\xb0'+'C / 100km / 3hr), Wind (kt)', ha='left', fontsize=18, color='white')
+plt.figtext(0.08, 1.00, f'   Heights (m), 3hr Temperature Adv (C/3hr), Frontogenesis (>2'+u'\xb0'+'C / 100km / 3hr), Wind (kt)', ha='left', fontsize=18, color='white')
 plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 # colorbar for filled contour
 cbar = plt.colorbar(tadv_contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-cbar.set_label('Temperature Advection' + ' ('+u'\xb0'+'C / hr)', fontsize=15, color='white')
+cbar.set_label('Temperature Advection' + ' ('+u'\xb0'+'C / 3hr)',  fontsize=15, color='white', fontweight='bold')
+cbar.ax.tick_params(labelcolor='white')
+for t in cbar.ax.get_xticklabels():
+    t.set_fontweight('bold')
 
 # add UND logo
 from PIL import Image
@@ -676,7 +717,8 @@ plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
 #     c.set_hatch('\\')
 #     c.set_linewidth(0.25)
 #     c.set_alpha(0.25)
-    
+
+ax.contour(lons, lats, temp_850, levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
 
 # contourf = ax.contourf(lons, lats, wdsp_850, np.arange(25, 100, 5),
 #                  cmap='BuPu', alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
@@ -695,7 +737,10 @@ plt.figtext(0.08, 1.00, f'   Heights (m), Temperature (C), Wind (kts)', ha='left
 plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 # colorbar for filled contour
 cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-cbar.set_label('Temperature (C)', fontsize=15, color='white')
+cbar.set_label('Temperature (C)',  fontsize=15, color='white', fontweight='bold')
+cbar.ax.tick_params(labelcolor='white')
+for t in cbar.ax.get_xticklabels():
+    t.set_fontweight('bold')
 
 # add UND logo
 from PIL import Image
@@ -719,6 +764,73 @@ print("    FINISHED 850HPA TEMP MAP")
 
 
 
+
+
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# SURFACE TEMPERATURE MAP
+#################################
+fig, ax = build_map()
+
+
+# plot mslp
+cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
+                linewidths=3.0, linestyles='-',
+                transform=ccrs.PlateCarree(), zorder=11)
+plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+           rightside_up=True, use_clabeltext=True)
+
+ax.contour(lons, lats, temp_sfc[0,:,:], levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
+
+contourf = ax.contourf(lons, lats, temp_sfc[0,:,:], np.arange(-50, 51, 1), extent='both',
+                 cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
+
+# plot  wind barbs
+every = 15
+barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+                uwnd_sfc[0, 0::every, 0::every], vwnd_sfc[0, 0::every, 0::every],
+                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
+
+# plot title, add one to the left with model name and data names, add another to the right with time info
+plt.figtext(0.08, 1.03, f'   RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
+plt.figtext(0.08, 1.00, f'   MSLP (hPa), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+# colorbar for filled contour
+cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
+cbar.set_label('Temperature (C)',  fontsize=15, color='white', fontweight='bold')
+cbar.ax.tick_params(labelcolor='white')
+for t in cbar.ax.get_xticklabels():
+    t.set_fontweight('bold')
+
+# add UND logo
+from PIL import Image
+img = Image.open('utils/images/und-logo.png')
+#                  side-side  up-down  size   size
+imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
+plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+imgax.imshow(img)
+imgax.axis('off')
+
+plt.savefig("staged_figures/conus_rap_analysis/rap_sfc_temp.png", bbox_inches="tight")
+
+print("    FINISHED SFC TEMP MAP")
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+
+
+
+
+
+
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# SURFACE OBS MAP
+#################################
 fig, ax = build_map(style='dark')
 
 
@@ -768,7 +880,10 @@ plt.figtext(0.08, 1.00, f'    RAP MSLP (hPa), {metar_time[11:16]}z METARs, {vali
 plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 # colorbar for filled contour
 cbar = plt.colorbar(pm, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-cbar.set_label('Reflectivity (dBz)', fontsize=15, color='white')
+cbar.set_label('Reflectivity (dBz)',  fontsize=15, color='white', fontweight='bold')
+cbar.ax.tick_params(labelcolor='white')
+for t in cbar.ax.get_xticklabels():
+    t.set_fontweight('bold')
 
 # add UND logo
 from PIL import Image
@@ -789,4 +904,4 @@ print("    FINISHED SFC ANL MAP")
 
 
 elapsed_time = comp_time.time() - st
-print(f"############\nSCRIPT FINISHED: time: {comp_time.strftime("%H:%M:%S", comp_time.gmtime(elapsed_time))}\n############")
+print(f"############\nSCRIPT FINISHED: time: {comp_time.strftime('%H:%M:%S', comp_time.gmtime(elapsed_time))}\n############")

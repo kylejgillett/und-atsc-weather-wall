@@ -1,3 +1,9 @@
+##########################################################
+#       SINGLE SITE NEXRAD ANALYSIS PLOT SCRIPT
+#  (c) KYLE J GILLETT, UNIVERSITY OF NORTH DAKOTA, 2025
+##########################################################
+
+
 print("############\nSCRIPT RUNNING\n############")
 import time as comp_time
 st = comp_time.time()
@@ -125,7 +131,7 @@ custom_layout.add_value('NW', 'air_temperature', fmt='.0f', color='orangered', f
 custom_layout.add_value('SW', 'dew_point_temperature', fmt='.0f', color='palegreen', fontweight='bold', path_effects=TEXT_OUTLINE)
 custom_layout.add_symbol('C', 'cloud_coverage', sky_cover, path_effects=TEXT_OUTLINE)
 stationplot = StationPlot(ax, filtered_metars['longitude'], filtered_metars['latitude'], clip_on=True,
-                          transform=ccrs.PlateCarree(), fontsize=11, zorder=12, alpha=1, color='white')
+                          transform=ccrs.PlateCarree(), fontsize=15, zorder=12, alpha=1, color='white')
 #stationplot.plot_text((1, -3), filtered_metars['stid'], color='white')
 custom_layout.plot(stationplot, filtered_metars)
 

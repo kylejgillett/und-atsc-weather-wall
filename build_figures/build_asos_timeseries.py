@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.lines as mlines
 from matplotlib.patheffects import withStroke
+import scipy.ndimage as ndimage
 
 
 # get script dir
@@ -42,23 +43,30 @@ stations = {
     "96D": ["AWOS", "Walhalla Airport, ND", "48.93, -97.90", "953 ft"]
             }
 
+
+
+
+
 # get station data and build the plot
 for station_id in stations:
 
     comp_time.sleep(10)
 
-    hours = 48
+    hours = 96
 
     # get data
     df = get_asos_obs(station_id, hours=hours)
 
     # define a text outline stroke and a skip
     TEXT_OUTLINE = [withStroke(linewidth=3, foreground=(0, 0, 0, 0.3))]
-    skip = int(len(df['drct'])/10)
+    skip = int(len(df['drct'])/6)
 
     # build figure
     fig = plt.figure(figsize=(20, 12))
-    fig.set_facecolor('#009946')
+    fig.set_facecolor('white')
+    fig.patch.set_edgecolor('#009946')
+    fig.patch.set_linewidth(20) 
+    
 
     # define all axes
     ax1 = plt.axes([0, 0.62, 0.91, 0.35])
@@ -71,18 +79,31 @@ for station_id in stations:
     # apply base settings to all axes
     for ax in [ax1, ax2, ax3, ax2b, ax3b]:
         ax.set_facecolor('white')
-        ax.tick_params(axis='x', labelsize=16, labelcolor='white', pad=10)
-        ax.tick_params(axis='y', labelsize=20, labelcolor='white')
+        ax.tick_params(axis='x', labelsize=16, labelcolor='black', pad=10)
+        ax.tick_params(axis='y', labelsize=20, labelcolor='black')
         for xlabel, ylabel in zip(ax.get_xticklabels(), ax.get_yticklabels()):
             xlabel.set_fontweight('bold')
             ylabel.set_fontweight('bold')
-        ax.patch.set_alpha(0.3)
-        ax.margins(0)
+        ax.margins(0.02)
         ax.xaxis.set_major_formatter((mdates.DateFormatter(' %m-%d'+'\n '+'%H:%M'+'Z')))
-        #ax.grid(which='major', axis='y', linestyle=(0, (5, 10)), color='white', linewidth=0.5)
-        ax.grid(True, color='black', alpha=0.2)
+        #ax.grid(which='major', axis='y', linestyle=(0, (5, 10)), color='black', linewidth=0.5)
+        ax.grid(True, color='black', alpha=0.5)
+        for spine in ax.spines.values():
+            spine.set_linewidth(3)    
+            spine.set_color("#000000") 
 
 
+
+
+    # apply smoothing filter to make prettier
+    # df['tmpf'] = ndimage.gaussian_filter1d(df['tmpf'],0.2)
+    # df['feel'] = ndimage.gaussian_filter1d(df['feel'],0.2)
+    # df['dwpf'] = ndimage.gaussian_filter1d(df['dwpf'],0.2)
+    # df['vsby'] = ndimage.gaussian_filter1d(df['vsby'],0.2)
+    # df['relh'] = ndimage.gaussian_filter1d(df['relh'],0.2)
+    # df['dwpf'] = ndimage.gaussian_filter1d(df['sknt'],0.2)
+    # df['vsby'] = ndimage.gaussian_filter1d(df['gust'],0.2)
+    # df['relh'] = ndimage.gaussian_filter1d(df['mslp'],0.2)
 
     ###########################
     # TEMPERATURE AXIS
@@ -93,23 +114,28 @@ for station_id in stations:
     # plot data
     ax1.plot(df['valid'], df['tmpf'], linestyle='-', zorder=1.5, color='orangered', linewidth=5, label='TMPF')
     ax1.plot(df['valid'], df['feel'], linestyle=':', zorder=1, color='blue', linewidth=3, label='FEEL')
-    ax1.plot(df['valid'], df['dwpf'], linestyle='-', zorder=1.2, color='palegreen', linewidth=5, label='DWPF')
+    ax1.plot(df['valid'], df['dwpf'], linestyle='-', zorder=1.2, color='co', linewidth=5, label='DWPF')
+
+    ax1.fill_between(df['valid'], df['tmpf'], -30,
+                    color='orangered', alpha=0.3, interpolate=True)
+    ax1.fill_between(df['valid'], df['dwpf'], -30,
+                    color='lightblue', alpha=0.3, interpolate=True)
 
     # plot data annotations
-    for x, y in zip(df['valid'][5::skip], df['tmpf'][5::skip]):
+    for x, y in zip(df['valid'][::-skip], df['tmpf'][::-skip]):
         ax1.text(x, y+3, f"{int(y)}°F", weight='bold', fontsize=15, color='orangered', 
                 alpha=1, path_effects=TEXT_OUTLINE, ha='center', clip_on=True)
-        ax1.add_line(mlines.Line2D([x, x], [y, y+3], alpha=0.3, color='white'))
-    for x, y in zip(df['valid'][5::skip], df['dwpf'][5::skip]):
-        ax1.text(x, y-3, f"{int(y)}°F", weight='bold', fontsize=15, color='palegreen', 
+        ax1.add_line(mlines.Line2D([x, x], [y, y+3], alpha=0.3, color='black'))
+    for x, y in zip(df['valid'][::-skip], df['dwpf'][::-skip]):
+        ax1.text(x, y-3, f"{int(y)}°F", weight='bold', fontsize=15, color='lightblue', 
                 alpha=1, path_effects=TEXT_OUTLINE, ha='center', clip_on=True)
-        ax1.add_line(mlines.Line2D([x, x], [y, y-3], alpha=0.3, color='white'))
+        ax1.add_line(mlines.Line2D([x, x], [y, y-3], alpha=0.3, color='black'))
 
     # plot hline at 32F
     ax1.axhline(y=32, color='blue', alpha=0.6, zorder=0.2)
 
     # add legend
-    leg = ax1.legend(ncol=3,fontsize=15, facecolor='darkgrey',edgecolor='black',labelcolor='black', loc='upper left')
+    leg = ax1.legend(ncol=3,fontsize=15, facecolor='gainsboro',edgecolor='black',labelcolor='black', loc='upper left')
     for text in leg.get_texts():
         text.set_fontweight('bold')
         text.set_color('black')
@@ -130,7 +156,7 @@ for station_id in stations:
     # set up legend (more complex for twin axes)
     ax2_lines = [ax2a_line, ax2b_line]
     ax2_labels = [l[0].get_label() for l in ax2_lines]
-    leg = ax2.legend([l[0] for l in ax2_lines], ax2_labels, ncol=2, fontsize=15, facecolor='darkgrey',edgecolor='black',
+    leg = ax2.legend([l[0] for l in ax2_lines], ax2_labels, ncol=2, fontsize=15, facecolor='gainsboro',edgecolor='black',
                     labelcolor='black', loc='upper left')
     for text in leg.get_texts():
         text.set_fontweight('bold')
@@ -157,16 +183,16 @@ for station_id in stations:
     # plot data
     ax3a_line1 = ax3.plot(df['valid'], df['sknt'], linestyle='-', color='lightblue', linewidth=5, label='SPD KT')
     ax3a_line2 = ax3.plot(df['valid'], df['gust'], linestyle='--', color='blue', linewidth=3, label="GST KT")
-    ax3b_line = ax3b.plot(df['valid'], df['mslp'], linestyle=':', color='white', linewidth=5, label="MSLP (mb)")
+    ax3b_line = ax3b.plot(df['valid'], df['mslp'], linestyle=':', color='gray', linewidth=5, label="MSLP (mb)")
 
     # plot wind dir vectors 
-    qvr = ax3.quiver(df['valid'][5::skip], df['y_arrow'][5::skip], df['u_norm'][5::skip], df['v_norm'][5::skip], pivot='middle',
+    qvr = ax3.quiver(df['valid'][::-skip], df['y_arrow'][::-skip], df['u_norm'][::-skip], df['v_norm'][::-skip], pivot='middle',
             scale=50, width=0.002, color='black', alpha=0.5)
 
     # set up legend (more complex for twin axes)
     ax3_lines = [ax3a_line1, ax3a_line2, ax3b_line]
     ax3_labels = [l[0].get_label() for l in ax3_lines]
-    leg = ax3.legend([l[0] for l in ax3_lines], ax3_labels, ncol=3, fontsize=15, facecolor='darkgrey',edgecolor='black',
+    leg = ax3.legend([l[0] for l in ax3_lines], ax3_labels, ncol=3, fontsize=15, facecolor='gainsboro',edgecolor='black',
                     labelcolor='black', loc='upper left')
     for text in leg.get_texts():
         text.set_fontweight('bold')
@@ -234,19 +260,19 @@ for station_id in stations:
                 ha='center', va='center',
                 fontsize=16, fontweight='bold',
                 color='black', family='monospace',
-                bbox=dict(facecolor='darkgray', edgecolor='black', boxstyle='round,pad=0.5'))
+                bbox=dict(facecolor='gainsboro', edgecolor='black', boxstyle='round,pad=0.5'))
 
 
     ###########################
     # TITLES AND EXTRAS 
     ###########################
-    plt.figtext(0.0, 1.01, f'  {hours}hr Surface Observations', weight='bold', ha='left', fontsize=32, color='white')
-    plt.figtext(0.0, 0.98, f'   {station_id} {stations[station_id][0]} - {stations[station_id][1]}  |  {stations[station_id][2]} | Elev:  {stations[station_id][3]}', ha='left', fontsize=23, color='white')
+    plt.figtext(0.0, 1.01, f'  {hours}hr Surface Observations', weight='bold', ha='left', fontsize=32, color='black')
+    plt.figtext(0.0, 0.98, f'   {station_id} {stations[station_id][0]} - {stations[station_id][1]}  |  {stations[station_id][2]} | Elev:  {stations[station_id][3]}', ha='left', fontsize=23, color='black')
     plt.figtext(-0.03, 1.038, f' ', ha='left', fontsize=20)
     img = Image.open('utils/images/und-logo.png')
     #                  side-side  up-down  size   size
     imgax = fig.add_axes([0.831, 0.995, 0.06, 0.06], anchor='SE', zorder=3)
-    plt.figtext(0.81, 0.979, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+    plt.figtext(0.81, 0.979, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='black')
     imgax.imshow(img)
     imgax.axis('off')
 

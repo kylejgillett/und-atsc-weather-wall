@@ -1,3 +1,9 @@
+##########################################################
+#              SPC OUTLOOK PLOTS SCRIPT
+#  (c) KYLE J GILLETT, UNIVERSITY OF NORTH DAKOTA, 2025
+##########################################################
+
+
 print("############\nSCRIPT RUNNING\n############")
 import time as comp_time
 st = comp_time.time()
@@ -15,6 +21,7 @@ import matplotlib.patches as mpatches
 import calendar
 from metpy.plots import USCOUNTIES
 
+import io
 import sys
 import os
 
@@ -36,8 +43,8 @@ target_dt = datetime.now(timezone.utc)
 # SPC outlook issue times
 valid_times = {
     1: ["0600", "1300", "1630", "2000"],  # Day 1 outlooks
-    2: ["0600", "1300", "1630"],          # Day 2 outlooks
-    3: ["0730"],                          # Day 3 outlooks
+    2: ["0700", "1730"],                  # Day 2 outlooks
+    3: ["0830"],                          # Day 3 outlooks
 }
 
 # Example for day 1
@@ -54,22 +61,24 @@ for outlook_day in range(1,4):
             url = f"https://www.spc.noaa.gov/products/outlook/archive/{year}/day{outlook_day}otlk_{year}{month}{day}_{t}_cat.lyr.geojson"
             try:
                 # Quick check if file exists
-                r = requests.head(url)
-                if r.status_code == 200:
+                r = requests.get(url)
+                if r.status_code == 200 and "json" in r.headers.get("Content-Type", "").lower():
+                    print('status is 200')
+                    print(url)
                     outlook_url = url
                     print(f"    SPC D{outlook_day} DATA LOADED.....{outlook_url}")
+                    # Read directly from memory buffer
+                    outlook = geopandas.read_file(io.BytesIO(r.content))
+                    outlooks.append(outlook)
                     break
             except Exception as e:
                 continue
         if outlook_url is not None:
             break
 
-    if outlook_url is None:
-        raise FileNotFoundError("No valid SPC outlook found for target or previous day.")
+    # if outlook_url is None:
+    #     raise FileNotFoundError("No valid SPC outlook found for target or previous day.")
 
-    # Read geojson
-    outlook = geopandas.read_file(outlook_url)
-    outlooks.append(outlook)
 
 
 for outlook, outlook_day in zip(outlooks, range(1,4)):
@@ -128,11 +137,11 @@ for outlook, outlook_day in zip(outlooks, range(1,4)):
         else: 
             color = 'black'
             alpha = 0.8
-        ax.add_feature(cfeature.STATES, edgecolor='navy', alpha=0.5, linestyle='-', linewidth=1, zorder=10)
+        ax.add_feature(cfeature.STATES, edgecolor='black', alpha=0.5, linestyle='-', linewidth=1, zorder=10)
         ax.add_feature(cfeature.LAND, facecolor=color, alpha=alpha, zorder=1)
         ax.add_feature(cfeature.OCEAN, facecolor=color, alpha=alpha+0.2, zorder=0)
         #ax.add_feature(cfeature.BORDERS, color='white', alpha=1, linestyle='-', linewidth=1, zorder=11)
-        ax.add_feature(cfeature.COASTLINE, color='navy', alpha=0.5, linestyle='-', linewidth=1, zorder=11)
+        ax.add_feature(cfeature.COASTLINE, color='black', alpha=0.5, linestyle='-', linewidth=1, zorder=11)
 
         # apply tight layout to the figure (keeps things tiddy)
         plt.tight_layout()

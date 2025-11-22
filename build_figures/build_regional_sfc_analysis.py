@@ -1,3 +1,8 @@
+##########################################################
+#       REGIONAL RAP AND SAT ANALYSIS PLOTS SCRIPT
+#  (c) KYLE J GILLETT, UNIVERSITY OF NORTH DAKOTA, 2025
+##########################################################
+
 print("############\nSCRIPT RUNNING\n############")
 
 import time as comp_time
