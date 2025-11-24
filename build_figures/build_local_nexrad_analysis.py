@@ -73,7 +73,7 @@ def build_map(extent=[-122, -73, 21, 56], projection=ccrs.LambertConformal()):
     ax.set_box_aspect(0.7)
 
     ax.add_feature(cfeature.STATES, edgecolor='white', alpha=0.2, linestyle='-', linewidth=2.5, zorder=10)
-    ax.add_feature(cfeature.LAND, facecolor="#1a2637", alpha=0.3, zorder=1)
+    ax.add_feature(cfeature.LAND, facecolor="#1a2637", alpha=0.3, zorder=0.1)
     ax.add_feature(USCOUNTIES.with_scale('5m'), alpha=0.7, edgecolor='white', linestyle=':', lw=1, zorder=9)
     nd_roads = ShapelyFeature(Reader('./utils/tl_2024_38_prisecroads/tl_2024_38_prisecroads.shp').geometries(),
                                ccrs.PlateCarree(), edgecolor='navy', lw=0.8, alpha=0.4, facecolor='none', zorder=11.5)

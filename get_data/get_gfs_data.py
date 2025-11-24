@@ -64,7 +64,7 @@ def gfs_forecast(center_lat=37.86, center_lon=-98.61, box_size=20, forecast_hour
     ).add_lonlat()
         
     # Subset by lat-lon domain (using your current wide domain)
-    query.lonlat_box(north=58.415, west=-139.970, east=-57.269, south=16.209)
+    query.lonlat_box(north=center_lat+box_size, west=center_lon-box_size, east=center_lon+box_size, south=center_lat-box_size)
     
     # Fetch data (single request for all times)
     ncss_data = ncss.get_data(query)

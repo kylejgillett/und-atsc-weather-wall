@@ -63,13 +63,7 @@ utc_now = [utc_date.strftime("%Y"), utc_date.strftime("%m"), utc_date.strftime("
 #############################################################################################################################################################################
 
 # set up rap retrieval 
-center_lat = 46.841203
-center_lon = -98.777673
-box_size   = 35
-west = center_lon  - box_size
-east = center_lon  + box_size
-south = center_lat - box_size
-north = center_lat + box_size
+box_size   = 50
 
 # pull rap data
 #forecast_hours = [int(hr) for hr in np.arange(6, 78, 6)]
@@ -108,11 +102,11 @@ for fh, raw_data in datas.items():
     vwnd_sfc = ndimage.gaussian_filter(raw_data.variables['v-component_of_wind_height_above_ground'], sigma=sigma) * 1.94384
     relh_sfc = ndimage.gaussian_filter(raw_data.variables['Relative_humidity_height_above_ground'], sigma=sigma)
     dwpt_sfc = mpcalc.dewpoint_from_relative_humidity(temp_sfc*units.degC, relh_sfc*units.percent)
-    reft_sfc = ndimage.gaussian_filter(raw_data.variables['Composite_reflectivity_entire_atmosphere'], 0.50)
-    rn_sfc = ndimage.gaussian_filter(raw_data.variables['Categorical_Rain_surface'], 0.1)
-    sn_sfc = ndimage.gaussian_filter(raw_data.variables['Categorical_Snow_surface'], 0.1)
-    zr_sfc = ndimage.gaussian_filter(raw_data.variables['Categorical_Freezing_Rain_surface'], 0.1)
-    ip_sfc = ndimage.gaussian_filter(raw_data.variables['Categorical_Ice_Pellets_surface'], 0.1)
+    reft_sfc = ndimage.gaussian_filter(raw_data.variables['Composite_reflectivity_entire_atmosphere'], 0.01)
+    rn_sfc = ndimage.gaussian_filter(raw_data.variables['Categorical_Rain_surface'], 0.75)
+    sn_sfc = ndimage.gaussian_filter(raw_data.variables['Categorical_Snow_surface'], 0.75)
+    zr_sfc = ndimage.gaussian_filter(raw_data.variables['Categorical_Freezing_Rain_surface'], 0.75)
+    ip_sfc = ndimage.gaussian_filter(raw_data.variables['Categorical_Ice_Pellets_surface'], 0.75)
 
     #################################
     # CALCULATE FRONTOGENESIS
@@ -183,12 +177,12 @@ for fh, raw_data in datas.items():
 
     # build map function
     def build_map(extent=[-122, -73, 21, 56], projection=ccrs.LambertConformal(), style='light', add_sat=False):
-        fig = plt.figure(figsize=(20, 12))
+        fig = plt.figure(figsize=(20, 10))
         fig.set_facecolor('#009946')
         ax = plt.axes(projection=projection)
 
         ax.set_extent(extent)
-        ax.set_box_aspect(0.7)
+        ax.set_box_aspect(0.6)
 
         if style == 'light':
             color = 'gray'
@@ -198,7 +192,7 @@ for fh, raw_data in datas.items():
             alpha = 0.8
 
         ax.add_feature(cfeature.STATES, edgecolor='navy', alpha=0.4, linestyle='-', linewidth=3, zorder=10)
-        ax.add_feature(cfeature.LAND, facecolor=color, alpha=alpha, zorder=1)
+        ax.add_feature(cfeature.LAND, facecolor=color, alpha=alpha, zorder=0.1)
         ax.add_feature(cfeature.OCEAN, facecolor=color, alpha=alpha + 0.2, zorder=0)
         ax.add_feature(cfeature.COASTLINE, color='navy', alpha=0.4, linestyle='-', linewidth=3, zorder=11)
         if add_sat:
@@ -240,7 +234,7 @@ for fh, raw_data in datas.items():
             rightside_up=True, use_clabeltext=True)
 
     # plot 300 hpa wind speed
-    contourf = ax.contourf(lons, lats, wdsp_300, np.arange(50, 160, 5), extend='both',
+    contourf = ax.contourf(lons, lats, wdsp_300, np.arange(50, 160, 5), extend='max',
                     cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
 
     # plot 300 hpa wind barbs
@@ -250,15 +244,25 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
-    plt.figtext(0.08, 1.00, f'   Heights (m), Wind (kt)', ha='left', fontsize=18, color='white')
+    plt.figtext(0.08, 1.03, f'     {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.00, f'     Heights (m), Wind (kt)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-    # colorbar for filled contour
-    cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-    cbar.set_label('Wind Speed (kts)', fontsize=15, color='white', fontweight='bold')
-    cbar.ax.tick_params(labelcolor='white')
-    for t in cbar.ax.get_xticklabels():
+    plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+    cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+    cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(50, 160, 5)[::1], extendrect=True)
+    cax.text(3, 0.5, f'Wind Speed (kts)',ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+    cbar.ax.tick_params(axis='y', labelcolor='white') 
+    for t in cbar.ax.get_yticklabels():
         t.set_fontweight('bold')
+        t.set_fontsize(9)
+    cbar.ax.set_facecolor('black')
+
+    # colorbar for filled contour
+    # cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
+    # cbar.set_label('Wind Speed (kts)', fontsize=15, color='white', fontweight='bold')
+    # cbar.ax.tick_params(labelcolor='white')
+    # for t in cbar.ax.get_xticklabels():
+    #     t.set_fontweight('bold')
 
     # add UND logo
     from PIL import Image
@@ -318,16 +322,25 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
-    plt.figtext(0.08, 1.00, f'   300 hPa Heights (m), Potential Vorticity (PVU), Wind (kt)', ha='left', fontsize=18, color='white')
+    plt.figtext(0.08, 1.03, f'     {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.00, f'     300 hPa Heights (m), Potential Vorticity (PVU), Wind (kt)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-    # colorbar for filled contour
-    cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-    cbar.set_label(r'Potential Vorticity Units (PVU; $\rm{10^{-6}\ K\ kg^{-1}\ m^{2}\ s^{-1}})$' + ' | 2PVU (dashed)',  fontsize=15, color='white', fontweight='bold')
-    cbar.ax.tick_params(labelcolor='white')
-    for t in cbar.ax.get_xticklabels():
+    plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+    cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+    cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=pv_clevs[::5], extendrect=True)
+    cax.text(3, 0.5, r'Potential Vorticity Units (PVU; $\rm{10^{-6}\ K\ kg^{-1}\ m^{2}\ s^{-1}})$' + ' | 2PVU (dashed)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+    cbar.ax.tick_params(axis='y', labelcolor='white') 
+    for t in cbar.ax.get_yticklabels():
         t.set_fontweight('bold')
+        t.set_fontsize(9)
+    cbar.ax.set_facecolor('black')
 
+    # # colorbar for filled contour
+    # cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
+    # cbar.set_label(r'Potential Vorticity Units (PVU; $\rm{10^{-6}\ K\ kg^{-1}\ m^{2}\ s^{-1}})$' + ' | 2PVU (dashed)',  fontsize=15, color='white', fontweight='bold')
+    # cbar.ax.tick_params(labelcolor='white')
+    # for t in cbar.ax.get_xticklabels():
+    #     t.set_fontweight('bold')
 
     # add UND logo
     from PIL import Image
@@ -376,7 +389,7 @@ for fh, raw_data in datas.items():
             rightside_up=True, use_clabeltext=True)
 
     # plot 500hpa wind speed
-    contourf = ax.contourf(lons, lats, wdsp_500, np.arange(30, 140, 5), extend='both',
+    contourf = ax.contourf(lons, lats, wdsp_500, np.arange(30, 140, 5), extend='max',
                     cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
 
     # plot 500 hpa wind barbs
@@ -386,15 +399,25 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
-    plt.figtext(0.08, 1.00, f'   500 hPa Heights (m), Wind (kt)', ha='left', fontsize=18, color='white')
+    plt.figtext(0.08, 1.03, f'     {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.00, f'     500 hPa Heights (m), Wind (kt)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-    # colorbar for filled contour
-    cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-    cbar.set_label('Wind Speed (kts)',  fontsize=15, color='white', fontweight='bold')
-    cbar.ax.tick_params(labelcolor='white')
-    for t in cbar.ax.get_xticklabels():
+    plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+    cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+    cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(30, 140, 5), extendrect=True)
+    cax.text(3, 0.5, 'Wind Speed (kts)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+    cbar.ax.tick_params(axis='y', labelcolor='white') 
+    for t in cbar.ax.get_yticklabels():
         t.set_fontweight('bold')
+        t.set_fontsize(9)
+    cbar.ax.set_facecolor('black')
+
+    # # colorbar for filled contour
+    # cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
+    # cbar.set_label('Wind Speed (kts)',  fontsize=15, color='white', fontweight='bold')
+    # cbar.ax.tick_params(labelcolor='white')
+    # for t in cbar.ax.get_xticklabels():
+    #     t.set_fontweight('bold')
 
 
     # add UND logo
@@ -459,15 +482,24 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
-    plt.figtext(0.08, 1.00, f'   500 hPa Heights (m), Rel. Vorticity (/sec•10⁵), Wind (kt)', ha='left', fontsize=18, color='white')
+    plt.figtext(0.08, 1.03, f'     {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.00, f'     500 hPa Heights (m), Rel. Vorticity (/sec•10⁵), Wind (kt)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-    # colorbar for filled contour
-    cbar = plt.colorbar(vort_cf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-    cbar.set_label('Relative Vorticity (/sec•10⁵)',  fontsize=15, color='white', fontweight='bold')
-    cbar.ax.tick_params(labelcolor='white')
-    for t in cbar.ax.get_xticklabels():
+    plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+    cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+    cbar = fig.colorbar(vort_cf, cax=cax, orientation='vertical', ticks=np.arange(-30, 52, 2), extendrect=True)
+    cax.text(3, 0.5, 'Relative Vorticity (/sec•10⁵)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+    cbar.ax.tick_params(axis='y', labelcolor='white') 
+    for t in cbar.ax.get_yticklabels():
         t.set_fontweight('bold')
+        t.set_fontsize(9)
+    cbar.ax.set_facecolor('black')
+    # # colorbar for filled contour
+    # cbar = plt.colorbar(vort_cf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
+    # cbar.set_label('Relative Vorticity (/sec•10⁵)',  fontsize=15, color='white', fontweight='bold')
+    # cbar.ax.tick_params(labelcolor='white')
+    # for t in cbar.ax.get_xticklabels():
+    #     t.set_fontweight('bold')
 
 
 
@@ -524,15 +556,24 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
-    plt.figtext(0.08, 1.00, f'   500 hPa Heights (m), Rel. Vorticity Adv. (sec⁻²•10⁹), Wind (kt)', ha='left', fontsize=18, color='white')
+    plt.figtext(0.08, 1.03, f'     {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.00, f'     500 hPa Heights (m), Rel. Vorticity Adv. (sec⁻²•10⁹), Wind (kt)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-    # colorbar for filled contour
-    cbar = plt.colorbar(vortadv_cf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-    cbar.set_label('Relative Vorticity Advection (sec⁻²•10⁹)',  fontsize=15, color='white', fontweight='bold')
-    cbar.ax.tick_params(labelcolor='white')
-    for t in cbar.ax.get_xticklabels():
+    plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+    cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+    cbar = fig.colorbar(vortadv_cf, cax=cax, orientation='vertical', ticks=np.arange(-40, 42, 2), extendrect=True)
+    cax.text(3, 0.5, 'Relative Vorticity Advection (sec⁻²•10⁹)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+    cbar.ax.tick_params(axis='y', labelcolor='white') 
+    for t in cbar.ax.get_yticklabels():
         t.set_fontweight('bold')
+        t.set_fontsize(9)
+    cbar.ax.set_facecolor('black')
+    # # colorbar for filled contour
+    # cbar = plt.colorbar(vortadv_cf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
+    # cbar.set_label('Relative Vorticity Advection (sec⁻²•10⁹)',  fontsize=15, color='white', fontweight='bold')
+    # cbar.ax.tick_params(labelcolor='white')
+    # for t in cbar.ax.get_xticklabels():
+    #     t.set_fontweight('bold')
 
     # add UND logo
     from PIL import Image
@@ -600,15 +641,24 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
-    plt.figtext(0.08, 1.00, f'   850 hPa Heights (m), 3hr Temperature Adv (C/3hr), Frontogenesis (>2'+u'\xb0'+'C / 100km / 3hr), Wind (kt)', ha='left', fontsize=18, color='white')
+    plt.figtext(0.08, 1.03, f'     {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.00, f'     850 hPa Heights (m), 3hr Temperature Adv (C/3hr), Frontogenesis (>2'+u'\xb0'+'C / 100km / 3hr), Wind (kt)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-    # colorbar for filled contour
-    cbar = plt.colorbar(tadv_contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-    cbar.set_label('Temperature Advection' + ' ('+u'\xb0'+'C / 3hr)',  fontsize=15, color='white', fontweight='bold')
-    cbar.ax.tick_params(labelcolor='white')
-    for t in cbar.ax.get_xticklabels():
+    plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+    cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+    cbar = fig.colorbar(tadv_contourf, cax=cax, orientation='vertical', ticks=np.arange(-7,7.25,1), extendrect=True)
+    cax.text(3, 0.5, 'Temperature Advection' + ' ('+u'\xb0'+'C / 3hr)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+    cbar.ax.tick_params(axis='y', labelcolor='white') 
+    for t in cbar.ax.get_yticklabels():
         t.set_fontweight('bold')
+        t.set_fontsize(9)
+    cbar.ax.set_facecolor('black')
+    # # colorbar for filled contour
+    # cbar = plt.colorbar(tadv_contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
+    # cbar.set_label('Temperature Advection' + ' ('+u'\xb0'+'C / 3hr)',  fontsize=15, color='white', fontweight='bold')
+    # cbar.ax.tick_params(labelcolor='white')
+    # for t in cbar.ax.get_xticklabels():
+    #     t.set_fontweight('bold')
 
     # add UND logo
     from PIL import Image
@@ -664,15 +714,24 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
-    plt.figtext(0.08, 1.00, f'   850 hPa Heights (m), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
+    plt.figtext(0.08, 1.03, f'     {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.00, f'     850 hPa Heights (m), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-    # colorbar for filled contour
-    cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-    cbar.set_label('Temperature (C)',  fontsize=15, color='white', fontweight='bold')
-    cbar.ax.tick_params(labelcolor='white')
-    for t in cbar.ax.get_xticklabels():
+    plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+    cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+    cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-40, 42, 5), extendrect=True)
+    cax.text(3, 0.5, 'Temperature (C)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+    cbar.ax.tick_params(axis='y', labelcolor='white') 
+    for t in cbar.ax.get_yticklabels():
         t.set_fontweight('bold')
+        t.set_fontsize(9)
+    cbar.ax.set_facecolor('black')
+    # # colorbar for filled contour
+    # cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
+    # cbar.set_label('Temperature (C)',  fontsize=15, color='white', fontweight='bold')
+    # cbar.ax.tick_params(labelcolor='white')
+    # for t in cbar.ax.get_xticklabels():
+    #     t.set_fontweight('bold')
 
     # add UND logo
     from PIL import Image
@@ -726,15 +785,24 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
-    plt.figtext(0.08, 1.00, f'   Surface MSLP (hPa), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
+    plt.figtext(0.08, 1.03, f'     {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.00, f'     Surface MSLP (hPa), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-    # colorbar for filled contour
-    cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-    cbar.set_label('Temperature (C)',  fontsize=15, color='white', fontweight='bold')
-    cbar.ax.tick_params(labelcolor='white')
-    for t in cbar.ax.get_xticklabels():
+    plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+    cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+    cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-50, 51, 5), extendrect=True)
+    cax.text(3, 0.5, 'Temperature (C)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+    cbar.ax.tick_params(axis='y', labelcolor='white') 
+    for t in cbar.ax.get_yticklabels():
         t.set_fontweight('bold')
+        t.set_fontsize(9)
+    cbar.ax.set_facecolor('black')
+    # # colorbar for filled contour
+    # cbar = plt.colorbar(contourf, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
+    # cbar.set_label('Temperature (C)',  fontsize=15, color='white', fontweight='bold')
+    # cbar.ax.tick_params(labelcolor='white')
+    # for t in cbar.ax.get_xticklabels():
+    #     t.set_fontweight('bold')
 
     # add UND logo
     from PIL import Image
@@ -772,15 +840,14 @@ for fh, raw_data in datas.items():
     plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
             rightside_up=True, use_clabeltext=True)
     
-    # define ptype arrays and masking
     ptype = np.zeros_like(rn_sfc)
-    ptype = np.where(sn_sfc == 1, 4, ptype) 
-    ptype = np.where(ip_sfc == 1, 3, ptype)
-    ptype = np.where(zr_sfc == 1, 2, ptype)
-    ptype = np.where(rn_sfc == 1, 1, ptype)
-    
+    ptype = np.where(sn_sfc >= 0.01, 4, ptype)
+    ptype = np.where(ip_sfc >= 0.01, 3, ptype)
+    ptype = np.where(zr_sfc >= 0.01, 2, ptype)
+    ptype = np.where(rn_sfc >= 0.01, 1, ptype)
+
     # prepare masking, cmaps, levels, norm
-    levels = np.arange(0, 50, 1)
+    levels = np.arange(-5, 50, 1)
     norm = BoundaryNorm(levels, 256)
     ptype_data_2d = {
         'Rain': (1, np.where(ptype == 1, reft_sfc, np.nan), 'Greens'),
@@ -797,30 +864,24 @@ for fh, raw_data in datas.items():
         cf_mappables[name] = cf
     
 
-    cbar_y_start = -0.017
-    cbar_height = 0.02
-    cbar_width = 0.18 
-    cbar_spacing = 0.02
+    cbar_x_start = 0.91 
+    cbar_width = 0.01 
+    cbar_height = 0.22
+    cbar_spacing = 0.02 
+    cbar_y_start_top = 0.75
+
     ptype_order = ['Rain', 'FrzRain', 'Sleet', 'Snow'] 
 
-    # loop through cbar objs
     for i, name in enumerate(ptype_order):
-        cbar_x_start = 0.1 + (i * (cbar_width + cbar_spacing))
-        # define cbar axis
+        cbar_y_start = cbar_y_start_top - (i * (cbar_height + cbar_spacing))
         cax = fig.add_axes([cbar_x_start, cbar_y_start, cbar_width, cbar_height])
-        # add cbar
-        cbar = fig.colorbar(cf_mappables[name],cax=cax,orientation='horizontal',ticks=levels[::3],extendrect=True)
-        # set cbar title
-        cax.text(0.5, 0.4, f'{name}',ha='center',va='center',color='white',fontsize=12,fontweight='bold',
-                transform=cax.transAxes) 
-        # add settings
-        cbar.ax.tick_params(axis='x', labelcolor='white')    
-        for t in cbar.ax.get_xticklabels():
+        cbar = fig.colorbar(cf_mappables[name],cax=cax,orientation='vertical',ticks=levels[::3],extendrect=True)
+        cax.text( 3.0, 0.5, f'{name}',ha='left',va='center',rotation=270,color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+        cbar.ax.tick_params(axis='y', labelcolor='white') 
+        for t in cbar.ax.get_yticklabels():
             t.set_fontweight('bold')
             t.set_fontsize(9)
-        cbar.ax.set_facecolor('black') 
-    fig.text(0.5, -0.06, 
-            'Precipitation Type Composite Reflectivity (dBZ)', ha='center', va='center', fontsize=12, color='white', fontweight='bold')
+        cbar.ax.set_facecolor('black')
     
 
     # plot 500-1000 thickness 
@@ -851,9 +912,10 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
-    plt.figtext(0.08, 1.00, f'   Surface MSLP (hPa), Composite Reflectivity Precip Type (dBZ), 1000-500 hPa Thickness (m), Wind (kts)', ha='left', fontsize=18, color='white')
+    plt.figtext(0.08, 1.03, f'     {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.00, f'     Surface MSLP (hPa), Composite Reflectivity Precip Type (dBZ), 1000-500 hPa Thickness (m), Wind (kts)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+    plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
 
     # add UND logo
     from PIL import Image
