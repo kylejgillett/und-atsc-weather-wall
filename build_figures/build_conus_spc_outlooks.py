@@ -63,8 +63,8 @@ for outlook_day in range(1,4):
                 # Quick check if file exists
                 r = requests.get(url)
                 if r.status_code == 200 and "json" in r.headers.get("Content-Type", "").lower():
-                    print('status is 200')
-                    print(url)
+                    #print('status is 200')
+                    #print(url)
                     outlook_url = url
                     print(f"    SPC D{outlook_day} DATA LOADED.....{outlook_url}")
                     # Read directly from memory buffer

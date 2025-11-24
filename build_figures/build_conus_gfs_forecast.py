@@ -18,11 +18,12 @@ from metpy.interpolate import interpolate_to_isosurface
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import matplotlib.pyplot as plt
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import numpy as np
 import sys
 import os
 import xarray as xr
+from matplotlib.colors import LinearSegmentedColormap, BoundaryNorm
 
 
 # get script dir
@@ -36,6 +37,7 @@ if project_root not in sys.path:
 
 # import modules from sub dirs
 from utils.colormaps import *
+from utils.utils import *
 from get_data.get_metars import get_metar_data
 from get_data.get_gfs_data import gfs_forecast
 from get_data.get_goes_from_aws import download_goes_file
@@ -70,11 +72,11 @@ south = center_lat - box_size
 north = center_lat + box_size
 
 # pull rap data
-datas = gfs_forecast(box_size=box_size)
+#forecast_hours = [int(hr) for hr in np.arange(6, 78, 6)]
+datas = gfs_forecast(box_size=box_size, forecast_hours=[36])
 
 for fh, raw_data in datas.items():
 
-    fh = str(fh).zfill(3)
 
     # LATS & LONS
     lats = raw_data.variables['latitude'][:]
@@ -85,32 +87,32 @@ for fh, raw_data in datas.items():
     pres_levs = pres_levs / 100
 
     # DATE INFO
-    try:
-        data_date = raw_data['time'].values[0]
-    except:
-        try:
-            data_date = raw_data['time1'].values[0]
-        except:
-            pass
-        pass
+    fh = str(fh).zfill(3)
 
-    valid_date = f'{data_date}'
+    # extract date objects and set up valid date title
     run_date = f'{raw_data['reftime'].values}'
+    valid_date = f'{raw_data['reftime'].values.astype('datetime64[ms]').astype(datetime) + timedelta(hours=int(fh))}'
+    valid_day_name = day_to_abbrev(raw_data['reftime'].values.astype('datetime64[ms]').astype(datetime) + timedelta(hours=int(fh)))
+    valid_date_str = f"+ {fh}hr valid {valid_day_name} {valid_date[5:7]}/{valid_date[8:10]} {valid_date[11:-16]}z"
 
     # BASIC DATA EXTRACTION
     sigma = 1.5
-    ghgt_iso = ndimage.gaussian_filter(raw_data.variables['Geopotential_height_isobaric'][0], sigma=sigma)
-    temp_iso = ndimage.gaussian_filter(raw_data.variables['Temperature_isobaric'][0], sigma=sigma) - 273.15
-    uwnd_iso = ndimage.gaussian_filter(raw_data.variables['u-component_of_wind_isobaric'][0], sigma=sigma) * 1.94384
-    vwnd_iso = ndimage.gaussian_filter(raw_data.variables['v-component_of_wind_isobaric'][0], sigma=sigma) * 1.94384
+    ghgt_iso = ndimage.gaussian_filter(raw_data.variables['Geopotential_height_isobaric'], sigma=sigma)
+    temp_iso = ndimage.gaussian_filter(raw_data.variables['Temperature_isobaric'], sigma=sigma) - 273.15
+    uwnd_iso = ndimage.gaussian_filter(raw_data.variables['u-component_of_wind_isobaric'], sigma=sigma) * 1.94384
+    vwnd_iso = ndimage.gaussian_filter(raw_data.variables['v-component_of_wind_isobaric'], sigma=sigma) * 1.94384
 
-    pres_sfc = ndimage.gaussian_filter(raw_data.variables['MSLP_Eta_model_reduction_msl'][0], sigma=sigma)
-    temp_sfc = ndimage.gaussian_filter(raw_data.variables['Temperature_height_above_ground'][0], sigma=sigma) - 273.15
-    uwnd_sfc = ndimage.gaussian_filter(raw_data.variables['u-component_of_wind_height_above_ground'][0], sigma=sigma) * 1.94384
-    vwnd_sfc = ndimage.gaussian_filter(raw_data.variables['v-component_of_wind_height_above_ground'][0], sigma=sigma) * 1.94384
-    relh_sfc = ndimage.gaussian_filter(raw_data.variables['Relative_humidity_height_above_ground'][0], sigma=sigma)
+    pres_sfc = ndimage.gaussian_filter(raw_data.variables['MSLP_Eta_model_reduction_msl'], sigma=sigma)
+    temp_sfc = ndimage.gaussian_filter(raw_data.variables['Temperature_height_above_ground'], sigma=sigma) - 273.15
+    uwnd_sfc = ndimage.gaussian_filter(raw_data.variables['u-component_of_wind_height_above_ground'], sigma=sigma) * 1.94384
+    vwnd_sfc = ndimage.gaussian_filter(raw_data.variables['v-component_of_wind_height_above_ground'], sigma=sigma) * 1.94384
+    relh_sfc = ndimage.gaussian_filter(raw_data.variables['Relative_humidity_height_above_ground'], sigma=sigma)
     dwpt_sfc = mpcalc.dewpoint_from_relative_humidity(temp_sfc*units.degC, relh_sfc*units.percent)
-
+    reft_sfc = ndimage.gaussian_filter(raw_data.variables['Composite_reflectivity_entire_atmosphere'], 0.50)
+    rn_sfc = ndimage.gaussian_filter(raw_data.variables['Categorical_Rain_surface'], 0.1)
+    sn_sfc = ndimage.gaussian_filter(raw_data.variables['Categorical_Snow_surface'], 0.1)
+    zr_sfc = ndimage.gaussian_filter(raw_data.variables['Categorical_Freezing_Rain_surface'], 0.1)
+    ip_sfc = ndimage.gaussian_filter(raw_data.variables['Categorical_Ice_Pellets_surface'], 0.1)
 
     #################################
     # CALCULATE FRONTOGENESIS
@@ -119,7 +121,9 @@ for fh, raw_data in datas.items():
     fgen = mpcalc.frontogenesis(raw_data['Temperature_isobaric'], 
                                 raw_data['u-component_of_wind_isobaric'],
                                 raw_data['v-component_of_wind_isobaric'],
-                                latitude=raw_data['latitude'].values,longitude=raw_data['longitude'].values,crs=ccrs.PlateCarree())
+                                latitude=raw_data['latitude'].values,
+                                longitude=raw_data['longitude'].values,
+                                crs=ccrs.PlateCarree())
     # convert units to delta deg C / 100 km / 3 hr
     fgen = fgen.metpy.convert_units('delta_degC/km/hour')*3*100
     # create `fgen_masked`, a DataArray of fgen values >2, all else are Nan
@@ -133,7 +137,9 @@ for fh, raw_data in datas.items():
     adv = mpcalc.advection(raw_data['Temperature_isobaric'], 
                         raw_data['u-component_of_wind_isobaric'],
                         raw_data['v-component_of_wind_isobaric'],
-                        latitude=raw_data['latitude'].values,longitude=raw_data['longitude'].values,crs=ccrs.PlateCarree())
+                        latitude=raw_data['latitude'].values,
+                        longitude=raw_data['longitude'].values,
+                        crs=ccrs.PlateCarree())
     # convert units to delta deg C / hr
     adv = adv.metpy.convert_units('delta_degC/hour')
     # apply some smoothing to adv 
@@ -151,12 +157,12 @@ for fh, raw_data in datas.items():
                                                             raw_data['isobaric'],
                                                             u=raw_data['u-component_of_wind_isobaric'],
                                                             v=raw_data['v-component_of_wind_isobaric'],
-                                                            dx=dx[None, None, :, :], dy=dy[None, None, :, :],
+                                                            dx=dx[None, :, :], dy=dy[None, :, :],
                                                             latitude=raw_data['latitude'])
 
     thta_on_2pvu = interpolate_to_isosurface(raw_data['pv'].values, raw_data['theta'].values,  2*1e-6, bottom_up_search=True)
-    u_on_2pvu    = interpolate_to_isosurface(raw_data['pv'][:,0,:,:].values, raw_data['u-component_of_wind_isobaric'][0,:,:,:].values, 2*1e-6, bottom_up_search=True)
-    v_on_2pvu    = interpolate_to_isosurface(raw_data['pv'][:,0,:,:].values, raw_data['v-component_of_wind_isobaric'][0,:,:,:].values, 2*1e-6, bottom_up_search=True)
+    u_on_2pvu    = interpolate_to_isosurface(raw_data['pv'][:,:,:].values, raw_data['u-component_of_wind_isobaric'][:,:,:].values, 2*1e-6, bottom_up_search=True)
+    v_on_2pvu    = interpolate_to_isosurface(raw_data['pv'][:,:,:].values, raw_data['v-component_of_wind_isobaric'][:,:,:].values, 2*1e-6, bottom_up_search=True)
 
     #############################################################################################################################################################################
     #############################################################################################################################################################################
@@ -176,7 +182,7 @@ for fh, raw_data in datas.items():
     #############################################################################################################################################################################
 
     # build map function
-    def build_map(extent=[-122, -73, 21, 56], projection=ccrs.LambertConformal(), style='light'):
+    def build_map(extent=[-122, -73, 21, 56], projection=ccrs.LambertConformal(), style='light', add_sat=False):
         fig = plt.figure(figsize=(20, 12))
         fig.set_facecolor('#009946')
         ax = plt.axes(projection=projection)
@@ -195,6 +201,10 @@ for fh, raw_data in datas.items():
         ax.add_feature(cfeature.LAND, facecolor=color, alpha=alpha, zorder=1)
         ax.add_feature(cfeature.OCEAN, facecolor=color, alpha=alpha + 0.2, zorder=0)
         ax.add_feature(cfeature.COASTLINE, color='navy', alpha=0.4, linestyle='-', linewidth=3, zorder=11)
+        if add_sat:
+            from cartopy.io import img_tiles
+            satellite = img_tiles.GoogleTiles(style='satellite')
+            ax.add_image(satellite, 4)
 
         plt.tight_layout()
 
@@ -213,7 +223,7 @@ for fh, raw_data in datas.items():
     #################################
     # BUILD 300 HPA MAP
     #################################
-    fig, ax = build_map()
+    fig, ax = build_map(add_sat=True)
 
     # slice data
     plev300 = np.where(pres_levs == 300)[0][0]
@@ -240,7 +250,7 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | +{fh}hr valid {valid_date[0:10]} {valid_date[11:-16]}z', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
     plt.figtext(0.08, 1.00, f'   Heights (m), Wind (kt)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
     # colorbar for filled contour
@@ -294,11 +304,11 @@ for fh, raw_data in datas.items():
 
 
     # plot 300hpa pv fill
-    contourf = ax.contourf(raw_data['longitude'], raw_data['latitude'], raw_data['pv'][plev300,0,:,:]*1e6, pv_clevs, cmap=pv_cmap,
+    contourf = ax.contourf(raw_data['longitude'], raw_data['latitude'], raw_data['pv'][plev300,:,:]*1e6, pv_clevs, cmap=pv_cmap,
                     transform=ccrs.PlateCarree(),extend='both')
 
     # plot a single dashed contour @ 2PVU
-    pv_contour = ax.contour(raw_data['longitude'], raw_data['latitude'], raw_data['pv'][plev300,0,:,:]*1e6, [2], colors='navy',linestyles='dashed',linewidths=2,
+    pv_contour = ax.contour(raw_data['longitude'], raw_data['latitude'], raw_data['pv'][plev300,:,:]*1e6, [2], colors='navy',linestyles='dashed',linewidths=2,
                     transform=ccrs.PlateCarree())
 
     # plot 300 hpa wind barbs
@@ -308,7 +318,7 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | +{fh}hr valid {valid_date[0:10]} {valid_date[11:-16]}z', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
     plt.figtext(0.08, 1.00, f'   300 hPa Heights (m), Potential Vorticity (PVU), Wind (kt)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
     # colorbar for filled contour
@@ -348,7 +358,7 @@ for fh, raw_data in datas.items():
     #################################
     # BUILD 500HPA FLOW MAP
     #################################
-    fig, ax = build_map()
+    fig, ax = build_map(add_sat=True)
 
     # slice data 
     plev500 = np.where(pres_levs == 500)[0][0]
@@ -376,7 +386,7 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | +{fh}hr valid {valid_date[0:10]} {valid_date[11:-16]}z', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
     plt.figtext(0.08, 1.00, f'   500 hPa Heights (m), Wind (kt)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
     # colorbar for filled contour
@@ -421,7 +431,7 @@ for fh, raw_data in datas.items():
     #################################
     fig, ax = build_map()
 
-    n_reps = 50
+    n_reps = 80
 
     # compute vorticity and vorticity advection
     dx, dy = mpcalc.lat_lon_grid_deltas(lons, lats)
@@ -449,7 +459,7 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | +{fh}hr valid {valid_date[0:10]} {valid_date[11:-16]}z', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
     plt.figtext(0.08, 1.00, f'   500 hPa Heights (m), Rel. Vorticity (/sec•10⁵), Wind (kt)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
     # colorbar for filled contour
@@ -504,7 +514,7 @@ for fh, raw_data in datas.items():
             rightside_up=True, use_clabeltext=True)
 
     # plot 500hpa abs vort adv fill
-    vortadv_cf = ax.contourf(lons, lats, relvort_adv, np.arange(-50, 52, 2),               #np.arange(-6*12**-7, 6*12**-7, 1*10**-9),
+    vortadv_cf = ax.contourf(lons, lats, relvort_adv, np.arange(-40, 42, 2),               #np.arange(-6*12**-7, 6*12**-7, 1*10**-9),
                                 extend='both', cmap='bwr', zorder=5, alpha=1, transform=ccrs.PlateCarree())
 
     # plot 500hpa wind barbs
@@ -514,7 +524,7 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | +{fh}hr valid {valid_date[0:10]} {valid_date[11:-16]}z', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
     plt.figtext(0.08, 1.00, f'   500 hPa Heights (m), Rel. Vorticity Adv. (sec⁻²•10⁹), Wind (kt)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
     # colorbar for filled contour
@@ -571,15 +581,15 @@ for fh, raw_data in datas.items():
 
 
 
-    n_reps = 50
+    n_reps = 20
     # plot 850hpa tadv
-    tadv_contourf = ax.contourf(raw_data['longitude'], raw_data['latitude'], 3*(mpcalc.smooth_n_point(adv[0,plev850,:,:], 9, n_reps)),
+    tadv_contourf = ax.contourf(raw_data['longitude'], raw_data['latitude'], 3*(mpcalc.smooth_n_point(adv[plev850,:,:], 9, n_reps)),
                     np.arange(-7,7.25,0.25), cmap='bwr', transform=ccrs.PlateCarree(), zorder=4, extend='both')
 
     ax.contour(lons, lats, temp_850, levels=[0], linewidths=3, linestyles='--', colors='gray', transform=ccrs.PlateCarree(), zorder=5)  
 
     # plot filled contours pf frontogenesis > 2 delta deg C / hr
-    fgen_contourf = ax.contour(raw_data['longitude'], raw_data['latitude'], fgen_masked[0,plev850,:,:], 
+    fgen_contourf = ax.contour(raw_data['longitude'], raw_data['latitude'], fgen_masked[plev850,:,:], 
                             np.arange(1, 32, 2), colors='navy', linestyles='-',
                             transform=ccrs.PlateCarree(), zorder=4)
 
@@ -590,7 +600,7 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | +{fh}hr valid {valid_date[0:10]} {valid_date[11:-16]}z', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
     plt.figtext(0.08, 1.00, f'   850 hPa Heights (m), 3hr Temperature Adv (C/3hr), Frontogenesis (>2'+u'\xb0'+'C / 100km / 3hr), Wind (kt)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
     # colorbar for filled contour
@@ -626,7 +636,7 @@ for fh, raw_data in datas.items():
     #############################################################################################################################################################################
     #############################################################################################################################################################################
     #################################
-    # SLICE THE DATA
+    # 850 TEMP MAP
     #################################
     fig, ax = build_map()
 
@@ -654,7 +664,7 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | +{fh}hr valid {valid_date[0:10]} {valid_date[11:-16]}z', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
     plt.figtext(0.08, 1.00, f'   850 hPa Heights (m), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
     # colorbar for filled contour
@@ -704,9 +714,9 @@ for fh, raw_data in datas.items():
     plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
             rightside_up=True, use_clabeltext=True)
 
-    ax.contour(lons, lats, temp_sfc[0,:,:], levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
+    ax.contour(lons, lats, temp_sfc[0, :,:], levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
 
-    contourf = ax.contourf(lons, lats, temp_sfc[0,:,:], np.arange(-50, 51, 1), extent='both',
+    contourf = ax.contourf(lons, lats, temp_sfc[0, :,:], np.arange(-50, 51, 1), extent='both',
                     cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
 
     # plot  wind barbs
@@ -716,7 +726,7 @@ for fh, raw_data in datas.items():
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
     # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | +{fh}hr valid {valid_date[0:10]} {valid_date[11:-16]}z', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
     plt.figtext(0.08, 1.00, f'   Surface MSLP (hPa), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
     plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
     # colorbar for filled contour
@@ -742,6 +752,127 @@ for fh, raw_data in datas.items():
     #############################################################################################################################################################################
     #############################################################################################################################################################################
 
+    
+    
+    
+    
+    
+    #############################################################################################################################################################################
+    #############################################################################################################################################################################
+    #############################################################################################################################################################################
+    #################################
+    # SURFACE PTYPE MAP
+    #################################
+    fig, ax = build_map(add_sat=True)
+
+    # plot mslp
+    cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
+                    linewidths=3.0, linestyles='-',
+                    transform=ccrs.PlateCarree(), zorder=11)
+    plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+            rightside_up=True, use_clabeltext=True)
+    
+    # define ptype arrays and masking
+    ptype = np.zeros_like(rn_sfc)
+    ptype = np.where(sn_sfc == 1, 4, ptype) 
+    ptype = np.where(ip_sfc == 1, 3, ptype)
+    ptype = np.where(zr_sfc == 1, 2, ptype)
+    ptype = np.where(rn_sfc == 1, 1, ptype)
+    
+    # prepare masking, cmaps, levels, norm
+    levels = np.arange(0, 50, 1)
+    norm = BoundaryNorm(levels, 256)
+    ptype_data_2d = {
+        'Rain': (1, np.where(ptype == 1, reft_sfc, np.nan), 'Greens'),
+        'FrzRain': (2, np.where(ptype == 2, reft_sfc, np.nan), 'RdPu'),
+        'Sleet': (3, np.where(ptype == 3, reft_sfc, np.nan), 'YlOrRd'),
+        'Snow': (4, np.where(ptype == 4, reft_sfc, np.nan), 'Blues'),
+    }
+        
+    # store contourf mappable objs in a dict for cbars
+    cf_mappables = {} 
+    for name, (value, mask, cmap) in ptype_data_2d.items():
+        cf = ax.contourf(lons, lats, mask, levels=levels,cmap=cmap,norm=norm,
+            transform=ccrs.PlateCarree(),extend='max', zorder=value)
+        cf_mappables[name] = cf
+    
+
+    cbar_y_start = -0.017
+    cbar_height = 0.02
+    cbar_width = 0.18 
+    cbar_spacing = 0.02
+    ptype_order = ['Rain', 'FrzRain', 'Sleet', 'Snow'] 
+
+    # loop through cbar objs
+    for i, name in enumerate(ptype_order):
+        cbar_x_start = 0.1 + (i * (cbar_width + cbar_spacing))
+        # define cbar axis
+        cax = fig.add_axes([cbar_x_start, cbar_y_start, cbar_width, cbar_height])
+        # add cbar
+        cbar = fig.colorbar(cf_mappables[name],cax=cax,orientation='horizontal',ticks=levels[::3],extendrect=True)
+        # set cbar title
+        cax.text(0.5, 0.4, f'{name}',ha='center',va='center',color='white',fontsize=12,fontweight='bold',
+                transform=cax.transAxes) 
+        # add settings
+        cbar.ax.tick_params(axis='x', labelcolor='white')    
+        for t in cbar.ax.get_xticklabels():
+            t.set_fontweight('bold')
+            t.set_fontsize(9)
+        cbar.ax.set_facecolor('black') 
+    fig.text(0.5, -0.06, 
+            'Precipitation Type Composite Reflectivity (dBZ)', ha='center', va='center', fontsize=12, color='white', fontweight='bold')
+    
+
+    # plot 500-1000 thickness 
+    ghgt_500 = ghgt_iso[np.where(pres_levs == 500)[0][0]]
+    ghgt_1000 = ghgt_iso[np.where(pres_levs == 1000)[0][0]]
+    thickness_1000_500 = ndimage.gaussian_filter(ghgt_500 - ghgt_1000, sigma=3.0)
+
+    clevs = (np.arange(0, 5400, 60), np.array([5400]), np.arange(5460, 7000, 60))
+    colors = ('tab:blue', 'cyan', 'tab:red')
+    kw_clabels = {'fontsize': 11, 'inline': True, 'inline_spacing': 5, 'fmt': '%i','rightside_up': True, 'use_clabeltext': True}
+
+    for clevthick, color in zip(clevs, colors):
+        if 5400 in clevthick:
+            linestyles = 'solid'
+            linewidths = 2.0
+        else:
+            linestyles = 'solid'
+            linewidths = 2.0
+
+        cs = ax.contour(lons, lats,thickness_1000_500, levels=clevthick, colors=color,
+            linewidths=linewidths, linestyles=linestyles,transform=ccrs.PlateCarree(),zorder=10)
+        plt.clabel(cs, **kw_clabels)
+
+    # plot  wind barbs
+    every = 10
+    barbs = ax.barbs(lons.values[0::every], lats.values[ 0::every],
+                    uwnd_sfc[0, 0::every, 0::every], vwnd_sfc[0, 0::every, 0::every],
+                    length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
+
+    # plot title, add one to the left with model name and data names, add another to the right with time info
+    plt.figtext(0.08, 1.03, f'   {run_date[11:-16]}z GFS Forecast | {valid_date_str}', weight='bold', ha='left', fontsize=20, color='white')
+    plt.figtext(0.08, 1.00, f'   Surface MSLP (hPa), Composite Reflectivity Precip Type (dBZ), 1000-500 hPa Thickness (m), Wind (kts)', ha='left', fontsize=18, color='white')
+    plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+
+    # add UND logo
+    from PIL import Image
+    img = Image.open('utils/images/und-logo.png')
+    #                  side-side  up-down  size   size
+    imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
+    plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+    imgax.imshow(img)
+    imgax.axis('off')
+
+    plt.savefig(f"staged_figures/conus_gfs_forecasts/gfs_sfc_ptype_F{fh}.png", bbox_inches="tight")
+
+    print("    FINISHED SFC PTYPE MAP")
+    #############################################################################################################################################################################
+    #############################################################################################################################################################################
+    #############################################################################################################################################################################
+
+    
+    
     print(f"    FINISHED F{fh} FIGURES")
 
 

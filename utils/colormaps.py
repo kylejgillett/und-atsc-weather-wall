@@ -23,7 +23,7 @@ temp_cmap = LinearSegmentedColormap.from_list("temp_cmap", temp_colors, N=256)
 
 
 ########### PIVITOL WX STYLE WIND SPEED CMAP ###########
-wdsp_colors = [(0.000, '#bfbfbf'),(0.004, '#87CEFA'),(0.166, '#6A5ACD'),(0.250, '#E696DC'),(0.333, '#C85ABE'),
+wdsp_colors = [(0.000, "#bfbfbf05"),(0.004, "#87CEFA3E"),(0.166, "#695ACD7F"),(0.250, '#E696DC'),(0.333, '#C85ABE'),
           (0.416, '#A01496'), (0.500, '#C80028'), (0.583, '#DC283C'), (0.666, '#F05050'),(0.750, '#FAF064'),
           (0.833, '#DCBE46'), (0.916, '#BE8C28'),(1.000, '#A05A0A')]
 wdsp_cmap = LinearSegmentedColormap.from_list("wdsp_cmap",wdsp_colors,N=256)

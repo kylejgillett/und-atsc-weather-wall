@@ -120,10 +120,10 @@ def build_map(extent=[west, east, south, north], projection=ccrs.LambertConforma
         color = 'black'
         alpha = 0.8
 
-    ax.add_feature(cfeature.STATES, edgecolor='black', alpha=0.5, linestyle='-', linewidth=2, zorder=10)
+    ax.add_feature(cfeature.STATES, edgecolor='navy', alpha=0.5, linestyle='-', linewidth=2, zorder=10)
     ax.add_feature(cfeature.LAND, facecolor=color, alpha=alpha, zorder=1)
     ax.add_feature(cfeature.OCEAN, facecolor=color, alpha=alpha + 0.2, zorder=0)
-    ax.add_feature(cfeature.COASTLINE, color='black', alpha=0.5, linestyle='-', linewidth=2, zorder=11)
+    ax.add_feature(cfeature.COASTLINE, color='navy', alpha=0.5, linestyle='-', linewidth=2, zorder=11)
 
     plt.tight_layout()
 

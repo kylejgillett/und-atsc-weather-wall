@@ -20,3 +20,11 @@ def wind_to_dir(u, v):
     idx = int((wind_dir_deg + 11.25) // 22.5) % 16
 
     return dirs[idx]
+
+
+
+
+# convert datetime obj day to abbreviated day name str
+def day_to_abbrev(date_obj):
+    abbr = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    return abbr[date_obj.weekday()]
