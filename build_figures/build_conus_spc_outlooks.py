@@ -121,14 +121,14 @@ for outlook, outlook_day in zip(outlooks, range(1,4)):
 
     def build_map(extent=[-120, -73, 21, 53], projection=ccrs.LambertConformal(), style='light'):
 
-        fig = plt.figure(figsize=(20, 12))
+        fig = plt.figure(figsize=(20, 10))
         fig.set_facecolor('#009946')
         ax = plt.axes(projection=projection)
 
         # apply the map extent (lat/lon bounding box)
         ax.set_extent(extent)
         # axis aspect ratio
-        ax.set_box_aspect(0.7)
+        ax.set_box_aspect(0.6)
         # add map features
         
         if style == 'light':
@@ -142,6 +142,9 @@ for outlook, outlook_day in zip(outlooks, range(1,4)):
         ax.add_feature(cfeature.OCEAN, facecolor=color, alpha=alpha+0.2, zorder=0)
         #ax.add_feature(cfeature.BORDERS, color='white', alpha=1, linestyle='-', linewidth=1, zorder=11)
         ax.add_feature(cfeature.COASTLINE, color='black', alpha=0.5, linestyle='-', linewidth=1, zorder=11)
+        from cartopy.io import img_tiles
+        satellite = img_tiles.GoogleTiles(style='satellite')
+        ax.add_image(satellite, 4)
 
         # apply tight layout to the figure (keeps things tiddy)
         plt.tight_layout()
