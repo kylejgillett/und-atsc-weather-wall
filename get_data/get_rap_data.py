@@ -76,7 +76,7 @@ def analysis(center_lat=37.86, center_lon=-98.61, box_size=20):
                     'V-Component_Storm_Motion_height_above_ground_layer').add_lonlat()
 
     # Subset data by lat-lon domain
-    query.lonlat_box(north=58.415, west=-139.970, east=-57.269, south=16.209)
+    query.lonlat_box(north=center_lat+box_size, west=center_lon-box_size, east=center_lon+box_size, south=center_lat-box_size)
 
     # Gets data
     ncss_data = ncss.get_data(query)
