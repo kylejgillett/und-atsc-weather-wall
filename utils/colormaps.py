@@ -71,6 +71,13 @@ rgb = rs_data[:, 1:] / 255.0
 levels = rs_data[:, 0]
 rs_expertreflect_cmap = ListedColormap(rgb)
 
+script_dir = os.path.dirname(os.path.abspath(__file__))
+txt_file_path = os.path.join(script_dir,"rs_basevelocity_colormap.txt")
+rs_data = np.loadtxt(txt_file_path, skiprows=3, usecols=(1, 2, 3, 4))
+rgb = rs_data[:, 1:] / 255.0
+levels = rs_data[:, 0]
+rs_basevelocity_cmap = ListedColormap(rgb)
+
 
 
 ########### NWS STYLE REFLECTIVITY CMAP ###########

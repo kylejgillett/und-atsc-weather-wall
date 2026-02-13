@@ -40,7 +40,7 @@ stations = {
     "FAR": ["ASOS", "Hector International Airport, ND", "46.92, -96.81", "899ft ft"],
     "DVL": ["AWOS", "Devils Lake Municipal Airport, ND", "48.12, -98.92", "1457 ft"],
     "TVF": ["AWOS", "Thief River Falls Regional Airport, MN", "48.07, -96.18", "1115 ft"],
-    "96D": ["AWOS", "Walhalla Airport, ND", "48.93, -97.90", "953 ft"]
+    "96D": ["AWOS", "Walhalla Airport, ND", "48.93, -97.90", "953 ft"],
             }
 
 
@@ -114,12 +114,12 @@ for station_id in stations:
     # plot data
     ax1.plot(df['valid'], df['tmpf'], linestyle='-', zorder=1.5, color='orangered', linewidth=5, label='TMPF')
     ax1.plot(df['valid'], df['feel'], linestyle=':', zorder=1, color='blue', linewidth=3, label='FEEL')
-    ax1.plot(df['valid'], df['dwpf'], linestyle='-', zorder=1.2, color='co', linewidth=5, label='DWPF')
+    ax1.plot(df['valid'], df['dwpf'], linestyle='-', zorder=1.2, color='cornflowerblue', linewidth=5, label='DWPF')
 
-    ax1.fill_between(df['valid'], df['tmpf'], -30,
+    ax1.fill_between(df['valid'], df['tmpf'], -60,
                     color='orangered', alpha=0.3, interpolate=True)
-    ax1.fill_between(df['valid'], df['dwpf'], -30,
-                    color='lightblue', alpha=0.3, interpolate=True)
+    ax1.fill_between(df['valid'], df['feel'], -60,
+                    color='blue', alpha=0.1, interpolate=True)
 
     # plot data annotations
     for x, y in zip(df['valid'][::-skip], df['tmpf'][::-skip]):
@@ -177,7 +177,7 @@ for station_id in stations:
     # WIND AXIS
     ###########################
     # axis max/min 
-    ax3.set_ylim(0, 60)
+    ax3.set_ylim(0, 70)
     ax3b.set_ylim(980, 1055)
 
     # plot data

@@ -83,9 +83,12 @@ try:
     data_date = raw_data['time'].values[0]
 except:
     try:
-        print(f'time{i}')
-        data_date = raw_data[f'time{i}'].values[0]
+        data_date = raw_data[f'time1'].values[0]
     except:
+        try:
+            data_date = raw_data[f'time2'].values[0]
+        except:
+            pass
         pass
     pass
 
@@ -171,7 +174,7 @@ v_on_2pvu    = interpolate_to_isosurface(raw_data['pv'][:,0,:,:].values, raw_dat
 radar_data, radar_lat, radar_lon, radar_time = get_latest_mosaic(utc_now[0], utc_now[1], utc_now[2])
 
 # get metar data
-metar_obs, metar_time = get_metar_data(reduced_to=100000)
+metar_obs, metar_time = get_metar_data(reduced_to=150000)
 metar_obs['air_temperature'] = (metar_obs['air_temperature']* 9/5) + 32
 metar_obs['dew_point_temperature'] = (metar_obs['dew_point_temperature']* 9/5) + 32
 
@@ -500,7 +503,6 @@ n_reps = 150
 dx, dy = mpcalc.lat_lon_grid_deltas(lons, lats)
 f = mpcalc.coriolis_parameter(np.deg2rad(lats)).to('1/s')
 vor_500 = mpcalc.smooth_n_point(mpcalc.vorticity(uwnd_500*units.kts, vwnd_500*units.kts, dx=dx, dy=dy), 9, n_reps)
-avor_500 = vor_500 + f
 
 # plot 500 hpa heights
 contour = ax.contour(lons, lats, ghgt_500, np.arange(3000, 7000, 60),
@@ -510,7 +512,6 @@ plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 # plot relative vorticity fill
-avor_500 = np.where((vor_500.m * 10**5 > -5) & (vor_500.m * 10**5 < 15), np.nan, vor_500)
 norm = mcolors.TwoSlopeNorm(vmin=-30, vcenter=0, vmax=50)
 vort_cf = ax.contourf(lons, lats, vor_500 * 10**5, np.arange(-30, 52, 2), 
                       norm=norm, extend='both', cmap='PuOr_r', zorder=5, alpha=1, transform=ccrs.PlateCarree())
@@ -569,7 +570,6 @@ fig, ax = build_map()
 
 # use 500hpa data and vort calculations from above 
 relvort_adv = mpcalc.advection(vor_500, uwnd_500, vwnd_500, dx=dx, dy=dy) *1e9
-absvort_adv = mpcalc.advection(avor_500, uwnd_500, vwnd_500, dx=dx, dy=dy) *1e9
 
 # plot 500hpa heights
 contour = ax.contour(lons, lats, ghgt_500, np.arange(3000, 7000, 60),
@@ -594,7 +594,7 @@ plt.figtext(0.08, 1.00, f'     Heights (m), Rel. Vorticity Adv. (sec⁻²•10�
 plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
 cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-cbar = fig.colorbar(vortadv_cf, cax=cax, orientation='vertical', ticks=np.arange(-40, 42, 2), extendrect=True)
+cbar = fig.colorbar(vortadv_cf, cax=cax, orientation='vertical', ticks=np.arange(-50, 52, 2), extendrect=True)
 cax.text(3, 0.5, 'Relative Vorticity Advection (sec⁻²•10⁹)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
 cbar.ax.tick_params(axis='y', labelcolor='white') 
 for t in cbar.ax.get_yticklabels():
@@ -916,7 +916,7 @@ plt.figtext(0.08, 1.00, f'      RAP MSLP (hPa), {metar_time[11:16]}z METARs, {va
 plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
 cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-cbar = fig.colorbar(pm, cax=cax, orientation='vertical', ticks=np.arange(-50, 51, 5), extendrect=True)
+cbar = fig.colorbar(pm, cax=cax, orientation='vertical', ticks=np.arange(-15, 95, 5), extendrect=True)
 cax.text(3, 0.5, 'Reflectivity (dBz)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
 cbar.ax.tick_params(axis='y', labelcolor='white') 
 for t in cbar.ax.get_yticklabels():

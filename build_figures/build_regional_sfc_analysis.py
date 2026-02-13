@@ -68,7 +68,7 @@ south = center_lat - box_size
 north = center_lat + box_size
 
 # pull rap data
-raw_data = analysis(center_lat, center_lon, box_size=box_size)
+raw_data = analysis(center_lat, center_lon, box_size=12)
 
 # LATS & LONS
 lats = raw_data.variables['lat'][:]
@@ -133,10 +133,14 @@ def build_map(extent=[west, east, south, north], projection=ccrs.LambertConforma
 # get radar mosaic data
 radar_data, radar_lat, radar_lon, radar_time = get_latest_mosaic(utc_now[0], utc_now[1], utc_now[2])
 
-# get metar data
-metar_obs, metar_time = get_metar_data(reduced_to=50000)
-metar_obs['air_temperature'] = (metar_obs['air_temperature']* 9/5) + 32
-metar_obs['dew_point_temperature'] = (metar_obs['dew_point_temperature']* 9/5) + 32
+try:
+    # get metar data
+    metar_obs, metar_time = get_metar_data(reduced_to=50000)
+    metar_obs['air_temperature'] = (metar_obs['air_temperature']* 9/5) + 32
+    metar_obs['dew_point_temperature'] = (metar_obs['dew_point_temperature']* 9/5) + 32
+    got_metar = True
+except:
+    pass
 
 # get satellite data
 output_filename = download_goes_file(utc_now[0],utc_now[4],utc_now[3],None)
@@ -200,22 +204,23 @@ xrds.close()
 fig, ax = build_map(style='dark')
 
 
-###################################################################
-# METAR STATION PLOTS
-###################################################################
-from metpy.plots import StationPlot, StationPlotLayout, sky_cover
-from matplotlib.patheffects import withStroke
-TEXT_OUTLINE = [withStroke(linewidth=1, foreground=(0, 0, 0, 0.3))]
-BARB_OUTLINE = [withStroke(linewidth=2, foreground=(0, 0, 0, 0.5))]
+if got_metar:
+    ###################################################################
+    # METAR STATION PLOTS
+    ###################################################################
+    from metpy.plots import StationPlot, StationPlotLayout, sky_cover
+    from matplotlib.patheffects import withStroke
+    TEXT_OUTLINE = [withStroke(linewidth=1, foreground=(0, 0, 0, 0.3))]
+    BARB_OUTLINE = [withStroke(linewidth=2, foreground=(0, 0, 0, 0.5))]
 
-custom_layout = StationPlotLayout()
-custom_layout.add_barb('eastward_wind', 'northward_wind', units='knots', path_effects=BARB_OUTLINE)
-custom_layout.add_value('NW', 'air_temperature', fmt='.0f', color='orangered', fontweight='bold', path_effects=TEXT_OUTLINE)
-custom_layout.add_value('SW', 'dew_point_temperature', fmt='.0f', color='palegreen', fontweight='bold', path_effects=TEXT_OUTLINE)
-custom_layout.add_symbol('C', 'cloud_coverage', sky_cover, path_effects=TEXT_OUTLINE)
-stationplot = StationPlot(ax, metar_obs['longitude'], metar_obs['latitude'], clip_on=True,
-                          transform=ccrs.PlateCarree(), fontsize=9, zorder=12, color='white', alpha=1)
-custom_layout.plot(stationplot, metar_obs)
+    custom_layout = StationPlotLayout()
+    custom_layout.add_barb('eastward_wind', 'northward_wind', units='knots', path_effects=BARB_OUTLINE)
+    custom_layout.add_value('NW', 'air_temperature', fmt='.0f', color='orangered', fontweight='bold', path_effects=TEXT_OUTLINE)
+    custom_layout.add_value('SW', 'dew_point_temperature', fmt='.0f', color='palegreen', fontweight='bold', path_effects=TEXT_OUTLINE)
+    custom_layout.add_symbol('C', 'cloud_coverage', sky_cover, path_effects=TEXT_OUTLINE)
+    stationplot = StationPlot(ax, metar_obs['longitude'], metar_obs['latitude'], clip_on=True,
+                            transform=ccrs.PlateCarree(), fontsize=9, zorder=12, color='white', alpha=1)
+    custom_layout.plot(stationplot, metar_obs)
 
 
 ###################################################################
@@ -232,7 +237,7 @@ plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
 # RADAR MOSAIC
 ###################################################################
 pm = ax.pcolormesh(radar_lon+0.05, radar_lat+0.05, radar_data,
-              vmin=-15, vmax=95, cmap=rs_expertreflect_cmap, alpha=0.8, zorder=1.3, transform=ccrs.PlateCarree())
+              vmin=-32, vmax=95, cmap=rs_expertreflect_cmap, alpha=0.8, zorder=1.3, transform=ccrs.PlateCarree())
 
 ###################################################################
 # LATEST FRONTS BULLETIN

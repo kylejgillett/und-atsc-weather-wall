@@ -67,7 +67,7 @@ box_size   = 50
 
 # pull rap data
 #forecast_hours = [int(hr) for hr in np.arange(6, 78, 6)]
-datas = gfs_forecast(box_size=box_size, forecast_hours=[36])
+datas = gfs_forecast(box_size=box_size, forecast_hours=[18])
 
 for fh, raw_data in datas.items():
 
@@ -87,7 +87,8 @@ for fh, raw_data in datas.items():
     run_date = f'{raw_data['reftime'].values}'
     valid_date = f'{raw_data['reftime'].values.astype('datetime64[ms]').astype(datetime) + timedelta(hours=int(fh))}'
     valid_day_name = day_to_abbrev(raw_data['reftime'].values.astype('datetime64[ms]').astype(datetime) + timedelta(hours=int(fh)))
-    valid_date_str = f"+ {fh}hr valid {valid_day_name} {valid_date[5:7]}/{valid_date[8:10]} {valid_date[11:-16]}z"
+    valid_date_str = f"+ {fh}hr valid {valid_day_name} {valid_date[5:7]}/{valid_date[8:10]} {valid_date[-8:-6]}z"
+    print(valid_date)
 
     # BASIC DATA EXTRACTION
     sigma = 1.5

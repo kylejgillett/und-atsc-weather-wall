@@ -97,44 +97,45 @@ def build_map(extent=[-122, -73, 21, 56], projection=ccrs.LambertConformal()):
     return fig, ax
 
 
-
-
 #################################
 # BUILD MAP
 #################################
 center_lat = 47.5
 center_lon = -97.5
+# center_lat = 48.175946 
+# center_lon = -106.639628
 box_size = 2
 fig, ax = build_map(extent=[center_lon-box_size, center_lon+box_size, center_lat-box_size, center_lat+box_size],
                     projection=ccrs.Mercator())
 
 
+try:
+    ###################################################################
+    # METAR STATION PLOTS
+    ###################################################################
+    from metpy.plots import StationPlot, StationPlotLayout, sky_cover
+    from matplotlib.patheffects import withStroke
+    TEXT_OUTLINE = [withStroke(linewidth=3, foreground=(0, 0, 0, 0.3))]
+    BARB_OUTLINE = [withStroke(linewidth=4, foreground=(0, 0, 0, 0.5))]
 
-###################################################################
-# METAR STATION PLOTS
-###################################################################
-from metpy.plots import StationPlot, StationPlotLayout, sky_cover
-from matplotlib.patheffects import withStroke
-TEXT_OUTLINE = [withStroke(linewidth=3, foreground=(0, 0, 0, 0.3))]
-BARB_OUTLINE = [withStroke(linewidth=4, foreground=(0, 0, 0, 0.5))]
+    metar_obs, metar_time = get_metar_data(reduced_to=10)
+    filtered_metars = metar_obs[
+        (metar_obs['latitude'] >= center_lat - box_size*2) & (metar_obs['latitude'] <= center_lat + box_size*2) &
+        (metar_obs['longitude'] >= center_lon - box_size*2) & (metar_obs['longitude'] <= center_lon + box_size*2)]
+    filtered_metars['air_temperature'] = (filtered_metars['air_temperature']* 9/5) + 32
+    filtered_metars['dew_point_temperature'] = (filtered_metars['dew_point_temperature']* 9/5) + 32
 
-metar_obs, metar_time = get_metar_data(reduced_to=0)
-filtered_metars = metar_obs[
-    (metar_obs['latitude'] >= center_lat - box_size*2) & (metar_obs['latitude'] <= center_lat + box_size*2) &
-    (metar_obs['longitude'] >= center_lon - box_size*2) & (metar_obs['longitude'] <= center_lon + box_size*2)]
-filtered_metars['air_temperature'] = (filtered_metars['air_temperature']* 9/5) + 32
-filtered_metars['dew_point_temperature'] = (filtered_metars['dew_point_temperature']* 9/5) + 32
-
-custom_layout = StationPlotLayout()
-custom_layout.add_barb('eastward_wind', 'northward_wind', units='knots', path_effects=BARB_OUTLINE)
-custom_layout.add_value('NW', 'air_temperature', fmt='.0f', color='orangered', fontweight='bold', path_effects=TEXT_OUTLINE)
-custom_layout.add_value('SW', 'dew_point_temperature', fmt='.0f', color='palegreen', fontweight='bold', path_effects=TEXT_OUTLINE)
-custom_layout.add_symbol('C', 'cloud_coverage', sky_cover, path_effects=TEXT_OUTLINE)
-stationplot = StationPlot(ax, filtered_metars['longitude'], filtered_metars['latitude'], clip_on=True,
-                          transform=ccrs.PlateCarree(), fontsize=15, zorder=12, alpha=1, color='white')
-#stationplot.plot_text((1, -3), filtered_metars['stid'], color='white')
-custom_layout.plot(stationplot, filtered_metars)
-
+    custom_layout = StationPlotLayout()
+    custom_layout.add_barb('eastward_wind', 'northward_wind', units='knots', path_effects=BARB_OUTLINE)
+    custom_layout.add_value('NW', 'air_temperature', fmt='.0f', color='orangered', fontweight='bold', path_effects=TEXT_OUTLINE)
+    custom_layout.add_value('SW', 'dew_point_temperature', fmt='.0f', color='palegreen', fontweight='bold', path_effects=TEXT_OUTLINE)
+    custom_layout.add_symbol('C', 'cloud_coverage', sky_cover, path_effects=TEXT_OUTLINE)
+    stationplot = StationPlot(ax, filtered_metars['longitude'], filtered_metars['latitude'], clip_on=True,
+                            transform=ccrs.PlateCarree(), fontsize=15, zorder=12, alpha=1, color='white')
+    #stationplot.plot_text((1, -3), filtered_metars['stid'], color='white')
+    custom_layout.plot(stationplot, filtered_metars)
+except: 
+    pass
 
 #################################
 # PLOT RADAR DATA
@@ -166,6 +167,7 @@ rad_display = display.plot_ppi_map(field= 'reflectivity',
 #################################
 # plot title, add one to the left with model name and data names, add another to the right with time info
 plt.figtext(0.08, 1.03, f'  KMVX LEVEL 2 BASE REFLECTIVITY', weight='bold', ha='left', fontsize=25, color='white')
+#plt.figtext(0.08, 1.03, f'  KGGW LEVEL 2 BASE REFLECTIVITY', weight='bold', ha='left', fontsize=25, color='white')
 plt.figtext(0.08, 1.00, f'   VALID: {radar_scan_string}z - ELEVATION: 0.5°  |  {metar_time[11:16]}z METARs', ha='left', fontsize=18, color='white')
 plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 # colorbar for filled contour
