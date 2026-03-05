@@ -52,7 +52,8 @@ else:
 utc_now = [utc_date.strftime("%Y"), utc_date.strftime("%m"), utc_date.strftime("%d"), utc_date.strftime("%H"), utc_doy]
 
 
-
+def c2f(celsius_array):
+    return (np.asanyarray(celsius_array) * 1.8) + 32
 
 
 #############################################################################################################################################################################
@@ -268,7 +269,6 @@ def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.Lambert
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
-
 
 
 
@@ -808,9 +808,9 @@ cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black
 plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
-ax.contour(lons, lats, temp_sfc[0,:,:], levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
+ax.contour(lons, lats, c2f(temp_sfc[0,:,:]), levels=[32], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
 
-contourf = ax.contourf(lons, lats, temp_sfc[0,:,:], np.arange(-50, 51, 1), extent='both',
+contourf = ax.contourf(lons, lats, c2f(temp_sfc[0,:,:]), np.arange(-60, 120, 1), extent='both',
                  cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
 
 # plot  wind barbs
@@ -821,12 +821,12 @@ barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every
 
 # plot title, add one to the left with model name and data names, add another to the right with time info
 plt.figtext(0.08, 1.03, f'   RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-plt.figtext(0.08, 1.00, f'   MSLP (hPa), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
+plt.figtext(0.08, 1.00, f'   MSLP (hPa), Temperature (F), Wind (kts)', ha='left', fontsize=18, color='white')
 plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
 cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-50, 51, 5), extendrect=True)
-cax.text(3, 0.5, 'Temperature (C)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-60, 130, 10), extendrect=True)
+cax.text(3, 0.5, 'Temperature (F)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
 cbar.ax.tick_params(axis='y', labelcolor='white') 
 for t in cbar.ax.get_yticklabels():
     t.set_fontweight('bold')
@@ -848,6 +848,70 @@ print("    FINISHED SFC TEMP MAP")
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
+
+
+
+
+
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# SURFACE DEWPOINT MAP
+#################################
+fig, ax = build_map()
+
+
+# plot mslp
+cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
+                linewidths=3.0, linestyles='-',
+                transform=ccrs.PlateCarree(), zorder=11)
+plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+           rightside_up=True, use_clabeltext=True)
+
+# ax.contour(lons, lats, c2f(dwpt_sfc[0,:,:]), levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
+
+
+contourf = ax.contourf(lons, lats, c2f(dwpt_sfc[0,:,:]), np.arange(-30, 92, 2), extent='both',
+                 cmap=dwpt_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
+
+# plot  wind barbs
+every = 15
+barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+                uwnd_sfc[0, 0::every, 0::every], vwnd_sfc[0, 0::every, 0::every],
+                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
+
+# plot title, add one to the left with model name and data names, add another to the right with time info
+plt.figtext(0.08, 1.03, f'   RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
+plt.figtext(0.08, 1.00, f'   MSLP (hPa), Dewpoint (F), Wind (kts)', ha='left', fontsize=18, color='white')
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-30, 90, 10), extendrect=True)
+cax.text(3, 0.5, 'Dewpoint temperature (F)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar.ax.tick_params(axis='y', labelcolor='white') 
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+    t.set_fontsize(9)
+cbar.ax.set_facecolor('black')
+
+# add UND logo
+from PIL import Image
+img = Image.open('utils/images/und-logo.png')
+#                  side-side  up-down  size   size
+imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
+plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+imgax.imshow(img)
+imgax.axis('off')
+
+plt.savefig("staged_figures/conus_rap_analysis/rap_sfc_dwpt.png", bbox_inches="tight")
+
+print("    FINISHED SFC DWPT MAP")
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+
+
 
 
 
@@ -939,7 +1003,6 @@ print("    FINISHED SFC ANL MAP")
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
-
 
 
 elapsed_time = comp_time.time() - st

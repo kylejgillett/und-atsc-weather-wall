@@ -59,9 +59,12 @@ utc_now = [utc_date.strftime("%Y"), utc_date.strftime("%m"), utc_date.strftime("
 
 
 # set up rap retrieval 
-center_lat = 46.841203
-center_lon = -98.777673
-box_size   = 6.5
+# GFK CENTERED
+#center_lat, center_lon = 46.841203, -98.777673
+# OTHER
+center_lat, center_lon = 40.150721, -74.518198
+
+box_size   = 4.5 # 6.5
 west = center_lon  - box_size
 east = center_lon  + box_size
 south = center_lat - box_size
@@ -187,6 +190,16 @@ crs = ccrs.Geostationary(central_longitude=xrds['goes_imager_projection'].longit
                          globe=globe)
 proj = ccrs.LambertConformal(globe=globe)
 
+
+
+#from metpy.calc import brightness_temperature
+#from metpy.units import units
+
+# This handles the Planck function conversion for you
+#bt = brightness_temperature(xrds['Rad'])
+
+
+
 xrds.close()
 
 
@@ -250,11 +263,11 @@ texts, params, geoms, valid_time = plot_bulletin(ax)
 ###################################################################
 # SATELLITE DATA
 ###################################################################
-ax.imshow(radiance.values, origin='upper', cmap=ir_greys, vmin=50, vmax=130,
+ax.imshow(radiance.values, origin='upper', cmap=ir_greys, vmin=30, vmax=130, #50, 130,
            extent=(data_xcord.values.min(), data_xcord.values.max(), data_ycord.values.min(), data_ycord.values.max()),
            regrid_shape=2000,
            aspect='auto',
-           interpolation='gaussian',
+           interpolation='bilinear',
            transform=crs,
            alpha=0.8, zorder=1)
 

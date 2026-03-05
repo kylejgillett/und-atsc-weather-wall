@@ -13,6 +13,23 @@ ir_colors = [(1, 1, 1), (0.6, 0.6, 0.6), (0.3, 0.3, 0.3), (0, 0, 0)]
 ir_greys = mcolors.LinearSegmentedColormap.from_list("ir_greys", ir_colors, N=256)
 
 
+########### DEWPOINT COLORMAP ###########
+dwpt_colors = [
+    (0.00, '#634235'), # -40: Dark Brown
+    (0.20, '#96816D'), # -14: Muted Brown
+    (0.30, '#EBE7D3'), # -1: Light Tan
+    (0.40, '#D8E5C1'), # 12: Pale Green starts
+    (0.55, '#6BB35F'), # 31: Vibrant Green
+    (0.75, '#1E6E32'), # 57: Deep Green persists longer
+    (0.82, '#3E5D61'), # 66: Teal (Transition begins later)
+    (0.88, '#2E3A4A'), # 74: Deep Navy/Charcoal
+    (0.94, '#5C4A8D'), # 82: Deep Purple
+    (1.00, '#B28EA1')  # 90: Light Pink/Mauve
+    ]
+
+dwpt_cmap = LinearSegmentedColormap.from_list("dwpt_cmap", dwpt_colors, N=256)
+
+
 
 ########### PIVITOL WX STYLE TEMPERATURE CMAP ###########
 temp_colors = [(0.000, '#B3ECE0'), (0.125, '#A08AC6'),(0.250, '#8C28AC'),(0.375, '#D4E2E8'),
