@@ -71,6 +71,7 @@ def analysis(center_lat=37.86, center_lon=-98.61, box_size=20):
                     'u-component_of_wind_height_above_ground', 'v-component_of_wind_height_above_ground',
                     'u-component_of_wind_isobaric', 'v-component_of_wind_isobaric',
                     'Convective_available_potential_energy_surface',
+                    'Convective_inhibition_surface',
                     'Storm_relative_helicity_height_above_ground_layer',
                     'U-Component_Storm_Motion_height_above_ground_layer',
                     'V-Component_Storm_Motion_height_above_ground_layer').add_lonlat()
