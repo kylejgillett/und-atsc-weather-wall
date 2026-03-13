@@ -66,7 +66,7 @@ except:
 
 def build_map(extent=[-122, -73, 21, 56], projection=ccrs.LambertConformal()):
 
-    fig = plt.figure(figsize=(20, 12))
+    fig = plt.figure(figsize=(20, 12), dpi=250)
     fig.set_facecolor('#009946')
     ax = plt.axes(projection=projection)
     ax.set_extent(extent)

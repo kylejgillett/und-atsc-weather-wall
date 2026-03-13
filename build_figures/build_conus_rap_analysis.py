@@ -109,8 +109,8 @@ uwnd_sfc = ndimage.gaussian_filter(raw_data.variables['u-component_of_wind_heigh
 vwnd_sfc = ndimage.gaussian_filter(raw_data.variables['v-component_of_wind_height_above_ground'][0], sigma=sigma) * 1.94384
 relh_sfc = ndimage.gaussian_filter(raw_data.variables['Relative_humidity_height_above_ground'][0], sigma=sigma)
 dwpt_sfc = mpcalc.dewpoint_from_relative_humidity(temp_sfc*units.degC, relh_sfc*units.percent)
-cape_sfc = ndimage.gaussian_filter(raw_data.variables['Convective_available_potential_energy_surface'][0], sigma=sigma)
-cin_sfc  = ndimage.gaussian_filter(raw_data.variables['Convective_inhibition_surface'][0], sigma=sigma)
+cape_ml = ndimage.gaussian_filter(raw_data.variables['Convective_available_potential_energy_pressure_difference_layer'][0,0], sigma=sigma)
+cin_ml  = ndimage.gaussian_filter(raw_data.variables['Convective_inhibition_pressure_difference_layer'][0,0], sigma=sigma)
 
 #################################
 # CALCULATE FRONTOGENESIS
@@ -239,7 +239,7 @@ xrds.close()
 
 # build map function
 def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.LambertConformal(), style='light'):
-    fig = plt.figure(figsize=(20, 10))
+    fig = plt.figure(figsize=(20, 10), dpi=250)
     fig.set_facecolor('#009946')
     ax = plt.axes(projection=projection)
 
@@ -272,68 +272,68 @@ def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.Lambert
 
 
 
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #################################
-# # BUILD 300 HPA MAP
-# #################################
-# fig, ax = build_map(add_sat=True)
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# BUILD 300 HPA MAP
+#################################
+fig, ax = build_map(add_sat=True)
 
-# # slice data
-# plev300 = np.where(pres_levs == 300)[0][0]
-# ghgt_300 = ghgt_iso[plev300]
-# uwnd_300 = uwnd_iso[plev300]
-# vwnd_300 = vwnd_iso[plev300]
-# wdsp_300 = np.sqrt(uwnd_300**2 + vwnd_300**2)
+# slice data
+plev300 = np.where(pres_levs == 300)[0][0]
+ghgt_300 = ghgt_iso[plev300]
+uwnd_300 = uwnd_iso[plev300]
+vwnd_300 = vwnd_iso[plev300]
+wdsp_300 = np.sqrt(uwnd_300**2 + vwnd_300**2)
 
-# # plot 300 hpa heights
-# contour = ax.contour(lons, lats, ghgt_300, np.arange(0, 12000, 120),
-#                 colors='black', linewidths=3.0, linestyles='-',
-#                 transform=ccrs.PlateCarree(), zorder=11)
-# plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
-#            rightside_up=True, use_clabeltext=True)
+# plot 300 hpa heights
+contour = ax.contour(lons, lats, ghgt_300, np.arange(0, 12000, 120),
+                colors='black', linewidths=3.0, linestyles='-',
+                transform=ccrs.PlateCarree(), zorder=11)
+plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+           rightside_up=True, use_clabeltext=True)
 
-# # plot 300 hpa wind speed
-# contourf = ax.contourf(lons, lats, wdsp_300, np.arange(50, 160, 5), extend='max',
-#                  cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
+# plot 300 hpa wind speed
+contourf = ax.contourf(lons, lats, wdsp_300, np.arange(50, 160, 5), extend='max',
+                 cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
 
-# # plot 300 hpa wind barbs
-# every = 20
-# barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
-#                 uwnd_300[0::every, 0::every], vwnd_300[0::every, 0::every],
-#                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
+# plot 300 hpa wind barbs
+every = 20
+barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+                uwnd_300[0::every, 0::every], vwnd_300[0::every, 0::every],
+                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
 
 
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'     RAP 300 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'     Heights (m), Wind (kt)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(50, 160, 5)[::1], extendrect=True)
-# cax.text(3, 0.5, f'Wind Speed (kts)',ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
+# plot title, add one to the left with model name and data names, add another to the right with time info
+plt.figtext(0.08, 1.03, f'     RAP 300 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
+plt.figtext(0.08, 1.00, f'     Heights (m), Wind (kt)', ha='left', fontsize=18, color='white')
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(50, 160, 5)[::1], extendrect=True)
+cax.text(3, 0.5, f'Wind Speed (kts)',ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar.ax.tick_params(axis='y', labelcolor='white') 
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+    t.set_fontsize(9)
+cbar.ax.set_facecolor('black')
 
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
+# add UND logo
+from PIL import Image
+img = Image.open('utils/images/und-logo.png')
+#                  side-side  up-down  size   size
+imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
+plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+imgax.imshow(img)
+imgax.axis('off')
 
-# plt.savefig("staged_figures/conus_rap_analysis/rap_300_flow.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_300_flow.png", bbox_inches="tight")
 
-# print("    FINISHED 300HPA FLOW MAP")
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
+print("    FINISHED 300HPA FLOW MAP")
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
 
 
 
@@ -414,69 +414,69 @@ def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.Lambert
 
 
 
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #################################
-# # BUILD 500HPA FLOW MAP
-# #################################
-# fig, ax = build_map(add_sat=True)
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# BUILD 500HPA FLOW MAP
+#################################
+fig, ax = build_map(add_sat=True)
 
-# # slice data 
-# plev500 = np.where(pres_levs == 500)[0][0]
-# ghgt_500 = ghgt_iso[plev500]
-# uwnd_500 = uwnd_iso[plev500]
-# vwnd_500 = vwnd_iso[plev500]
-# wdsp_500 = np.sqrt(uwnd_500**2 + vwnd_500**2)
-
-
-# # plot 500 hpa heights
-# contour = ax.contour(lons, lats, ghgt_500, np.arange(3000, 7000, 60),
-#                 colors='black', linewidths=3.0, linestyles='-',
-#                 transform=ccrs.PlateCarree(), zorder=11)
-# plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
-#            rightside_up=True, use_clabeltext=True)
-
-# # plot 500hpa wind speed
-# contourf = ax.contourf(lons, lats, wdsp_500, np.arange(30, 140, 5), extend='max',
-#                  cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
-
-# # plot 500 hpa wind barbs
-# every = 20
-# barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
-#                 uwnd_500[0::every, 0::every], vwnd_500[0::every, 0::every],
-#                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
-
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'     RAP 500 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'     Heights (m), Wind (kt)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(30, 140, 5), extendrect=True)
-# cax.text(3, 0.5, 'Wind Speed (kts)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
+# slice data 
+plev500 = np.where(pres_levs == 500)[0][0]
+ghgt_500 = ghgt_iso[plev500]
+uwnd_500 = uwnd_iso[plev500]
+vwnd_500 = vwnd_iso[plev500]
+wdsp_500 = np.sqrt(uwnd_500**2 + vwnd_500**2)
+
+
+# plot 500 hpa heights
+contour = ax.contour(lons, lats, ghgt_500, np.arange(3000, 7000, 60),
+                colors='black', linewidths=3.0, linestyles='-',
+                transform=ccrs.PlateCarree(), zorder=11)
+plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+           rightside_up=True, use_clabeltext=True)
+
+# plot 500hpa wind speed
+contourf = ax.contourf(lons, lats, wdsp_500, np.arange(30, 140, 5), extend='max',
+                 cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
+
+# plot 500 hpa wind barbs
+every = 20
+barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+                uwnd_500[0::every, 0::every], vwnd_500[0::every, 0::every],
+                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
+
+# plot title, add one to the left with model name and data names, add another to the right with time info
+plt.figtext(0.08, 1.03, f'     RAP 500 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
+plt.figtext(0.08, 1.00, f'     Heights (m), Wind (kt)', ha='left', fontsize=18, color='white')
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(30, 140, 5), extendrect=True)
+cax.text(3, 0.5, 'Wind Speed (kts)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar.ax.tick_params(axis='y', labelcolor='white') 
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+    t.set_fontsize(9)
+cbar.ax.set_facecolor('black')
 
 
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
+# add UND logo
+from PIL import Image
+img = Image.open('utils/images/und-logo.png')
+#                  side-side  up-down  size   size
+imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
+plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+imgax.imshow(img)
+imgax.axis('off')
 
-# plt.savefig("staged_figures/conus_rap_analysis/rap_500_flow.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_500_flow.png", bbox_inches="tight")
 
-# print("    FINISHED 500HPA FLOW MAP")
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
+print("    FINISHED 500HPA FLOW MAP")
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
 
 
 
@@ -488,69 +488,69 @@ def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.Lambert
 
 
 
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #################################
-# # BUILD 500 HPA REL VORT MAP
-# #################################
-# fig, ax = build_map()
-
-# n_reps = 150
-
-# # compute vorticity and vorticity advection
-# dx, dy = mpcalc.lat_lon_grid_deltas(lons, lats)
-# f = mpcalc.coriolis_parameter(np.deg2rad(lats)).to('1/s')
-# vor_500 = mpcalc.smooth_n_point(mpcalc.vorticity(uwnd_500*units.kts, vwnd_500*units.kts, dx=dx, dy=dy), 9, n_reps)
-
-# # plot 500 hpa heights
-# contour = ax.contour(lons, lats, ghgt_500, np.arange(3000, 7000, 60),
-#                 colors='black', linewidths=3.0, linestyles='-',
-#                 transform=ccrs.PlateCarree(), zorder=11)
-# plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
-#            rightside_up=True, use_clabeltext=True)
-
-# # plot relative vorticity fill
-# norm = mcolors.TwoSlopeNorm(vmin=-30, vcenter=0, vmax=50)
-# vort_cf = ax.contourf(lons, lats, vor_500 * 10**5, np.arange(-30, 52, 2), 
-#                       norm=norm, extend='both', cmap='PuOr_r', zorder=5, alpha=1, transform=ccrs.PlateCarree())
-
-# # plot wind barbs
-# every = 20
-# barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
-#                 uwnd_500[0::every, 0::every], vwnd_500[0::every, 0::every],
-#                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
-
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'     RAP 500 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'     Heights (m), Rel. Vorticity (/sec•10⁵), Wind (kt)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(vort_cf, cax=cax, orientation='vertical', ticks=np.arange(-30, 52, 2), extendrect=True)
-# cax.text(3, 0.5, 'Relative Vorticity (/sec•10⁵)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# BUILD 500 HPA REL VORT MAP
+#################################
+fig, ax = build_map()
+
+n_reps = 150
+
+# compute vorticity and vorticity advection
+dx, dy = mpcalc.lat_lon_grid_deltas(lons, lats)
+f = mpcalc.coriolis_parameter(np.deg2rad(lats)).to('1/s')
+vor_500 = mpcalc.smooth_n_point(mpcalc.vorticity(uwnd_500*units.kts, vwnd_500*units.kts, dx=dx, dy=dy), 9, n_reps)
+
+# plot 500 hpa heights
+contour = ax.contour(lons, lats, ghgt_500, np.arange(3000, 7000, 60),
+                colors='black', linewidths=3.0, linestyles='-',
+                transform=ccrs.PlateCarree(), zorder=11)
+plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+           rightside_up=True, use_clabeltext=True)
+
+# plot relative vorticity fill
+norm = mcolors.TwoSlopeNorm(vmin=-30, vcenter=0, vmax=50)
+vort_cf = ax.contourf(lons, lats, vor_500 * 10**5, np.arange(-30, 52, 2), 
+                      norm=norm, extend='both', cmap='PuOr_r', zorder=5, alpha=1, transform=ccrs.PlateCarree())
+
+# plot wind barbs
+every = 20
+barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+                uwnd_500[0::every, 0::every], vwnd_500[0::every, 0::every],
+                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
+
+# plot title, add one to the left with model name and data names, add another to the right with time info
+plt.figtext(0.08, 1.03, f'     RAP 500 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
+plt.figtext(0.08, 1.00, f'     Heights (m), Rel. Vorticity (/sec•10⁵), Wind (kt)', ha='left', fontsize=18, color='white')
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+cbar = fig.colorbar(vort_cf, cax=cax, orientation='vertical', ticks=np.arange(-30, 52, 2), extendrect=True)
+cax.text(3, 0.5, 'Relative Vorticity (/sec•10⁵)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar.ax.tick_params(axis='y', labelcolor='white') 
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+    t.set_fontsize(9)
+cbar.ax.set_facecolor('black')
 
 
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
+# add UND logo
+from PIL import Image
+img = Image.open('utils/images/und-logo.png')
+#                  side-side  up-down  size   size
+imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
+plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+imgax.imshow(img)
+imgax.axis('off')
 
-# plt.savefig("staged_figures/conus_rap_analysis/rap_500_relvort.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_500_relvort.png", bbox_inches="tight")
 
-# print("    FINISHED 500HPA REL VORT MAP")
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
+print("    FINISHED 500HPA REL VORT MAP")
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
 
 
 
@@ -559,137 +559,137 @@ def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.Lambert
 
 
 
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #################################
-# # BUILD 500HPA ABSVORTADV MAP
-# #################################
-# fig, ax = build_map()
-
-# # use 500hpa data and vort calculations from above 
-# relvort_adv = mpcalc.advection(vor_500, uwnd_500, vwnd_500, dx=dx, dy=dy) *1e9
-
-# # plot 500hpa heights
-# contour = ax.contour(lons, lats, ghgt_500, np.arange(3000, 7000, 60),
-#                 colors='black', linewidths=3.0, linestyles='-',
-#                 transform=ccrs.PlateCarree(), zorder=11)
-# plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
-#            rightside_up=True, use_clabeltext=True)
-
-# # plot 500hpa abs vort adv fill
-# vortadv_cf = ax.contourf(lons, lats, ndimage.gaussian_filter(relvort_adv, 4), np.arange(-50, 52, 2),               #np.arange(-6*12**-7, 6*12**-7, 1*10**-9),
-#                              extend='both', cmap='bwr', zorder=5, alpha=1, transform=ccrs.PlateCarree())
-
-# # plot 500hpa wind barbs
-# every = 20
-# barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
-#                 uwnd_500[0::every, 0::every], vwnd_500[0::every, 0::every],
-#                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
-
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'     RAP 500 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'     Heights (m), Rel. Vorticity Adv. (sec⁻²•10⁹), Wind (kt)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(vortadv_cf, cax=cax, orientation='vertical', ticks=np.arange(-50, 52, 2), extendrect=True)
-# cax.text(3, 0.5, 'Relative Vorticity Advection (sec⁻²•10⁹)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# BUILD 500HPA ABSVORTADV MAP
+#################################
+fig, ax = build_map()
+
+# use 500hpa data and vort calculations from above 
+relvort_adv = mpcalc.advection(vor_500, uwnd_500, vwnd_500, dx=dx, dy=dy) *1e9
+
+# plot 500hpa heights
+contour = ax.contour(lons, lats, ghgt_500, np.arange(3000, 7000, 60),
+                colors='black', linewidths=3.0, linestyles='-',
+                transform=ccrs.PlateCarree(), zorder=11)
+plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+           rightside_up=True, use_clabeltext=True)
+
+# plot 500hpa abs vort adv fill
+vortadv_cf = ax.contourf(lons, lats, ndimage.gaussian_filter(relvort_adv, 4), np.arange(-50, 52, 2),               #np.arange(-6*12**-7, 6*12**-7, 1*10**-9),
+                             extend='both', cmap='bwr', zorder=5, alpha=1, transform=ccrs.PlateCarree())
+
+# plot 500hpa wind barbs
+every = 20
+barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+                uwnd_500[0::every, 0::every], vwnd_500[0::every, 0::every],
+                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
+
+# plot title, add one to the left with model name and data names, add another to the right with time info
+plt.figtext(0.08, 1.03, f'     RAP 500 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
+plt.figtext(0.08, 1.00, f'     Heights (m), Rel. Vorticity Adv. (sec⁻²•10⁹), Wind (kt)', ha='left', fontsize=18, color='white')
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+cbar = fig.colorbar(vortadv_cf, cax=cax, orientation='vertical', ticks=np.arange(-50, 52, 2), extendrect=True)
+cax.text(3, 0.5, 'Relative Vorticity Advection (sec⁻²•10⁹)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar.ax.tick_params(axis='y', labelcolor='white') 
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+    t.set_fontsize(9)
+cbar.ax.set_facecolor('black')
 
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
+# add UND logo
+from PIL import Image
+img = Image.open('utils/images/und-logo.png')
+#                  side-side  up-down  size   size
+imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
+plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+imgax.imshow(img)
+imgax.axis('off')
 
-# plt.savefig("staged_figures/conus_rap_analysis/rap_500_relvortadv.png", bbox_inches="tight")
-
-# print("    FINISHED 500HPA REL VORT ADV MAP")
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-
-
-
-
-
-
+plt.savefig("staged_figures/conus_rap_analysis/rap_500_relvortadv.png", bbox_inches="tight")
+
+print("    FINISHED 500HPA REL VORT ADV MAP")
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+
+
+
+
+
+
 
 
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #################################
-# # BUILD 700HPA TEMP MAP
-# #################################
-# fig, ax = build_map()
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# BUILD 700HPA TEMP MAP
+#################################
+fig, ax = build_map()
 
-# # slice data
-# plev700 = np.where(pres_levs == 700)[0][0]
-# ghgt_700 = ghgt_iso[plev700]
-# uwnd_700 = uwnd_iso[plev700]
-# vwnd_700 = vwnd_iso[plev700]
-# temp_700 = temp_iso[plev700]
-# wdsp_700 = np.sqrt(uwnd_700**2 + vwnd_700**2)
-
-
-# # plot 700 hpa heights
-# contour = ax.contour(lons, lats, ghgt_700, np.arange(1800, 4000, 30),
-#                 colors='black', linewidths=3.0, linestyles='-',
-#                 transform=ccrs.PlateCarree(), zorder=11)
-# plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
-#            rightside_up=True, use_clabeltext=True)
-
-# # plot 0C isotherm
-# ax.contour(lons, lats, temp_700, levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
-
-# # plot 700hpa temperature fill
-# contourf = ax.contourf(lons, lats, temp_700, np.arange(-40, 42, 1), extent='both',
-#                  cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
-
-# # plot 700hpa wind barbs
-# every = 15
-# barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
-#                 uwnd_700[0::every, 0::every], vwnd_700[0::every, 0::every],
-#                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
-
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'     RAP 700 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'     Heights (m), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-40, 42, 5), extendrect=True)
-# cax.text(3, 0.5, 'Temperature (C)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
-
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
+# slice data
+plev700 = np.where(pres_levs == 700)[0][0]
+ghgt_700 = ghgt_iso[plev700]
+uwnd_700 = uwnd_iso[plev700]
+vwnd_700 = vwnd_iso[plev700]
+temp_700 = temp_iso[plev700]
+wdsp_700 = np.sqrt(uwnd_700**2 + vwnd_700**2)
+
+
+# plot 700 hpa heights
+contour = ax.contour(lons, lats, ghgt_700, np.arange(1800, 4000, 30),
+                colors='black', linewidths=3.0, linestyles='-',
+                transform=ccrs.PlateCarree(), zorder=11)
+plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+           rightside_up=True, use_clabeltext=True)
+
+# plot 0C isotherm
+ax.contour(lons, lats, temp_700, levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
+
+# plot 700hpa temperature fill
+contourf = ax.contourf(lons, lats, temp_700, np.arange(-40, 42, 1), extent='both',
+                 cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
+
+# plot 700hpa wind barbs
+every = 15
+barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+                uwnd_700[0::every, 0::every], vwnd_700[0::every, 0::every],
+                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
+
+# plot title, add one to the left with model name and data names, add another to the right with time info
+plt.figtext(0.08, 1.03, f'     RAP 700 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
+plt.figtext(0.08, 1.00, f'     Heights (m), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-40, 42, 5), extendrect=True)
+cax.text(3, 0.5, 'Temperature (C)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar.ax.tick_params(axis='y', labelcolor='white') 
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+    t.set_fontsize(9)
+cbar.ax.set_facecolor('black')
+
+# add UND logo
+from PIL import Image
+img = Image.open('utils/images/und-logo.png')
+#                  side-side  up-down  size   size
+imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
+plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+imgax.imshow(img)
+imgax.axis('off')
 
-# plt.savefig("staged_figures/conus_rap_analysis/rap_700_temp.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_700_temp.png", bbox_inches="tight")
 
-# print("    FINISHED 700HPA TEMP MAP")
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
+print("    FINISHED 700HPA TEMP MAP")
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
 
 
 
@@ -698,79 +698,79 @@ def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.Lambert
 
 
 
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #################################
-# # BUILD 850HPA TADV MAP
-# #################################
-# fig, ax = build_map()
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# BUILD 850HPA TADV MAP
+#################################
+fig, ax = build_map()
 
-# # slice data
-# plev850 = np.where(pres_levs == 850)[0][0]
-# ghgt_850 = ghgt_iso[plev850]
-# uwnd_850 = uwnd_iso[plev850]
-# vwnd_850 = vwnd_iso[plev850]
-# temp_850 = temp_iso[plev850]
-# wdsp_850 = np.sqrt(uwnd_850**2 + vwnd_850**2)
+# slice data
+plev850 = np.where(pres_levs == 850)[0][0]
+ghgt_850 = ghgt_iso[plev850]
+uwnd_850 = uwnd_iso[plev850]
+vwnd_850 = vwnd_iso[plev850]
+temp_850 = temp_iso[plev850]
+wdsp_850 = np.sqrt(uwnd_850**2 + vwnd_850**2)
 
-# # plot 850hpa heights
-# contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
-#                 colors='black', linewidths=3.0, linestyles='-',
-#                 transform=ccrs.PlateCarree(), zorder=11)
-# plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
-#            rightside_up=True, use_clabeltext=True)
-
-
-
-# n_reps = 80
-# # plot 850hpa tadv
-# tadv_contourf = ax.contourf(raw_data['lon'], raw_data['lat'], 3*(mpcalc.smooth_n_point(adv[0,plev850,:,:], 9, n_reps)),
-#                 np.arange(-7,7.25,0.25), cmap='bwr', transform=ccrs.PlateCarree(), zorder=4, extend='both')
-
-# ax.contour(lons, lats, temp_850, levels=[0], linewidths=3, linestyles='--', colors='gray', transform=ccrs.PlateCarree(), zorder=5)  
-
-# # plot filled contours pf frontogenesis > 2 delta deg C / hr
-# fgen_contourf = ax.contour(raw_data['lon'], raw_data['lat'], fgen_masked[0,plev850,:,:], 
-#                            np.arange(1, 32, 2), colors='navy', linestyles='-',
-#                            transform=ccrs.PlateCarree(), zorder=4)
-
-# # plot 850hpa wind barbs
-# every = 15
-# barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
-#                 uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
-#                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
+# plot 850hpa heights
+contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
+                colors='black', linewidths=3.0, linestyles='-',
+                transform=ccrs.PlateCarree(), zorder=11)
+plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+           rightside_up=True, use_clabeltext=True)
+
+
+
+n_reps = 80
+# plot 850hpa tadv
+tadv_contourf = ax.contourf(raw_data['lon'], raw_data['lat'], 3*(mpcalc.smooth_n_point(adv[0,plev850,:,:], 9, n_reps)),
+                np.arange(-7,7.25,0.25), cmap='bwr', transform=ccrs.PlateCarree(), zorder=4, extend='both')
+
+ax.contour(lons, lats, temp_850, levels=[0], linewidths=3, linestyles='--', colors='gray', transform=ccrs.PlateCarree(), zorder=5)  
+
+# plot filled contours pf frontogenesis > 2 delta deg C / hr
+fgen_contourf = ax.contour(raw_data['lon'], raw_data['lat'], fgen_masked[0,plev850,:,:], 
+                           np.arange(1, 32, 2), colors='navy', linestyles='-',
+                           transform=ccrs.PlateCarree(), zorder=4)
+
+# plot 850hpa wind barbs
+every = 15
+barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+                uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
+                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'     RAP 850 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'     Heights (m), 3hr Temperature Adv (C/3hr), Frontogenesis (>2'+u'\xb0'+'C / 100km / 3hr), Wind (kt)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(tadv_contourf, cax=cax, orientation='vertical', ticks=np.arange(-7,7.25,1), extendrect=True)
-# cax.text(3, 0.5, 'Temperature Advection' + ' ('+u'\xb0'+'C / 3hr)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
+# plot title, add one to the left with model name and data names, add another to the right with time info
+plt.figtext(0.08, 1.03, f'     RAP 850 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
+plt.figtext(0.08, 1.00, f'     Heights (m), 3hr Temperature Adv (C/3hr), Frontogenesis (>2'+u'\xb0'+'C / 100km / 3hr), Wind (kt)', ha='left', fontsize=18, color='white')
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+cbar = fig.colorbar(tadv_contourf, cax=cax, orientation='vertical', ticks=np.arange(-7,7.25,1), extendrect=True)
+cax.text(3, 0.5, 'Temperature Advection' + ' ('+u'\xb0'+'C / 3hr)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar.ax.tick_params(axis='y', labelcolor='white') 
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+    t.set_fontsize(9)
+cbar.ax.set_facecolor('black')
 
 
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
+# add UND logo
+from PIL import Image
+img = Image.open('utils/images/und-logo.png')
+#                  side-side  up-down  size   size
+imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
+plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+imgax.imshow(img)
+imgax.axis('off')
 
-# plt.savefig("staged_figures/conus_rap_analysis/rap_850_tempadv.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_850_tempadv.png", bbox_inches="tight")
 
-# print("    FINISHED 850HPA TEMP ADV MAP")
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
+print("    FINISHED 850HPA TEMP ADV MAP")
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
 
 
 
@@ -778,64 +778,64 @@ def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.Lambert
 
 
 
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #################################
-# # BUILD 850HPA FLOW MAP
-# #################################
-# fig, ax = build_map(add_sat=True)
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# BUILD 850HPA FLOW MAP
+#################################
+fig, ax = build_map(add_sat=True)
 
-# # use 850 slices from above
+# use 850 slices from above
 
 
-# # plot 850 hpa heights
-# contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
-#                 colors='black', linewidths=3.0, linestyles='-',
-#                 transform=ccrs.PlateCarree(), zorder=11)
-# plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
-#            rightside_up=True, use_clabeltext=True)
+# plot 850 hpa heights
+contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
+                colors='black', linewidths=3.0, linestyles='-',
+                transform=ccrs.PlateCarree(), zorder=11)
+plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+           rightside_up=True, use_clabeltext=True)
 
-# # plot 850 wind speed fill
-# contourf = ax.contourf(lons, lats, wdsp_850, np.arange(20, 85, 5), extend='max',
-#                             cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
-
+# plot 850 wind speed fill
+contourf = ax.contourf(lons, lats, wdsp_850, np.arange(20, 85, 5), extend='max',
+                            cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
+
 
-# # plot 850hpa wind barbs
-# every = 15
-# barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
-#                 uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
-#                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
+# plot 850hpa wind barbs
+every = 15
+barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+                uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
+                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'     RAP 850 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'     Heights (m), Wind (kts)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(25, 100, 5), extendrect=True)
-# cax.text(3, 0.5, 'Wind Speed (kts)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
+# plot title, add one to the left with model name and data names, add another to the right with time info
+plt.figtext(0.08, 1.03, f'     RAP 850 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
+plt.figtext(0.08, 1.00, f'     Heights (m), Wind (kts)', ha='left', fontsize=18, color='white')
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(25, 100, 5), extendrect=True)
+cax.text(3, 0.5, 'Wind Speed (kts)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar.ax.tick_params(axis='y', labelcolor='white') 
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+    t.set_fontsize(9)
+cbar.ax.set_facecolor('black')
 
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
+# add UND logo
+from PIL import Image
+img = Image.open('utils/images/und-logo.png')
+#                  side-side  up-down  size   size
+imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
+plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+imgax.imshow(img)
+imgax.axis('off')
 
-# plt.savefig("staged_figures/conus_rap_analysis/rap_850_flow.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_850_flow.png", bbox_inches="tight")
 
-# print("    FINISHED 850HPA FLOW MAP")
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# ############################################################################################################################################################################.
+print("    FINISHED 850HPA FLOW MAP")
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+############################################################################################################################################################################.
 
 
 
@@ -846,66 +846,66 @@ def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.Lambert
 
 
 
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #################################
-# # BUILD 850HPA TEMP MAP
-# #################################
-# fig, ax = build_map()
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# BUILD 850HPA TEMP MAP
+#################################
+fig, ax = build_map()
 
-# # use 850 slices from above
+# use 850 slices from above
 
 
-# # plot 850 hpa heights
-# contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
-#                 colors='black', linewidths=3.0, linestyles='-',
-#                 transform=ccrs.PlateCarree(), zorder=11)
-# plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
-#            rightside_up=True, use_clabeltext=True)
+# plot 850 hpa heights
+contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
+                colors='black', linewidths=3.0, linestyles='-',
+                transform=ccrs.PlateCarree(), zorder=11)
+plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+           rightside_up=True, use_clabeltext=True)
 
-# # plot 0C isotherm
-# ax.contour(lons, lats, temp_850, levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
+# plot 0C isotherm
+ax.contour(lons, lats, temp_850, levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
 
-# # plot 850hpa temperature fill
-# contourf = ax.contourf(lons, lats, temp_850, np.arange(-40, 42, 1), extent='both',
-#                  cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
+# plot 850hpa temperature fill
+contourf = ax.contourf(lons, lats, temp_850, np.arange(-40, 42, 1), extent='both',
+                 cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
 
-# # plot 850hpa wind barbs
-# every = 15
-# barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
-#                 uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
-#                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
+# plot 850hpa wind barbs
+every = 15
+barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+                uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
+                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'     RAP 850 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'     Heights (m), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-40, 42, 5), extendrect=True)
-# cax.text(3, 0.5, 'Temperature (C)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
+# plot title, add one to the left with model name and data names, add another to the right with time info
+plt.figtext(0.08, 1.03, f'     RAP 850 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
+plt.figtext(0.08, 1.00, f'     Heights (m), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-40, 42, 5), extendrect=True)
+cax.text(3, 0.5, 'Temperature (C)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar.ax.tick_params(axis='y', labelcolor='white') 
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+    t.set_fontsize(9)
+cbar.ax.set_facecolor('black')
 
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
+# add UND logo
+from PIL import Image
+img = Image.open('utils/images/und-logo.png')
+#                  side-side  up-down  size   size
+imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
+plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+imgax.imshow(img)
+imgax.axis('off')
 
-# plt.savefig("staged_figures/conus_rap_analysis/rap_850_temp.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_850_temp.png", bbox_inches="tight")
 
-# print("    FINISHED 850HPA TEMP MAP")
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
+print("    FINISHED 850HPA TEMP MAP")
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
 
 
 
@@ -915,124 +915,124 @@ def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.Lambert
 
 
 
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #################################
-# # SURFACE TEMPERATURE MAP
-# #################################
-# fig, ax = build_map()
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# SURFACE TEMPERATURE MAP
+#################################
+fig, ax = build_map()
 
 
-# # plot mslp
-# cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
-#                 linewidths=3.0, linestyles='-',
-#                 transform=ccrs.PlateCarree(), zorder=11)
-# plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
-#            rightside_up=True, use_clabeltext=True)
+# plot mslp
+cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
+                linewidths=3.0, linestyles='-',
+                transform=ccrs.PlateCarree(), zorder=11)
+plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+           rightside_up=True, use_clabeltext=True)
 
-# ax.contour(lons, lats, c2f(temp_sfc[0,:,:]), levels=[32], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
+ax.contour(lons, lats, c2f(temp_sfc[0,:,:]), levels=[32], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
 
-# contourf = ax.contourf(lons, lats, c2f(temp_sfc[0,:,:]), np.arange(-60, 120, 1), extent='both',
-#                  cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
+contourf = ax.contourf(lons, lats, c2f(temp_sfc[0,:,:]), np.arange(-60, 120, 1), extent='both',
+                 cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
 
-# # plot  wind barbs
-# every = 15
-# barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
-#                 uwnd_sfc[0, 0::every, 0::every], vwnd_sfc[0, 0::every, 0::every],
-#                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
+# plot  wind barbs
+every = 15
+barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+                uwnd_sfc[0, 0::every, 0::every], vwnd_sfc[0, 0::every, 0::every],
+                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'   RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'   MSLP (hPa), Temperature (F), Wind (kts)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-60, 130, 10), extendrect=True)
-# cax.text(3, 0.5, 'Temperature (F)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
+# plot title, add one to the left with model name and data names, add another to the right with time info
+plt.figtext(0.08, 1.03, f'   RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
+plt.figtext(0.08, 1.00, f'   MSLP (hPa), Temperature (F), Wind (kts)', ha='left', fontsize=18, color='white')
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-60, 130, 10), extendrect=True)
+cax.text(3, 0.5, 'Temperature (F)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar.ax.tick_params(axis='y', labelcolor='white') 
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+    t.set_fontsize(9)
+cbar.ax.set_facecolor('black')
 
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
+# add UND logo
+from PIL import Image
+img = Image.open('utils/images/und-logo.png')
+#                  side-side  up-down  size   size
+imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
+plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+imgax.imshow(img)
+imgax.axis('off')
 
-# plt.savefig("staged_figures/conus_rap_analysis/rap_sfc_temp.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_sfc_temp.png", bbox_inches="tight")
 
-# print("    FINISHED SFC TEMP MAP")
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
+print("    FINISHED SFC TEMP MAP")
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
 
 
 
 
 
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #################################
-# # SURFACE DEWPOINT MAP
-# #################################
-# fig, ax = build_map()
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# SURFACE DEWPOINT MAP
+#################################
+fig, ax = build_map()
 
 
-# # plot mslp
-# cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
-#                 linewidths=3.0, linestyles='-',
-#                 transform=ccrs.PlateCarree(), zorder=11)
-# plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
-#            rightside_up=True, use_clabeltext=True)
+# plot mslp
+cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
+                linewidths=3.0, linestyles='-',
+                transform=ccrs.PlateCarree(), zorder=11)
+plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+           rightside_up=True, use_clabeltext=True)
 
-# # ax.contour(lons, lats, c2f(dwpt_sfc[0,:,:]), levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
+# ax.contour(lons, lats, c2f(dwpt_sfc[0,:,:]), levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
 
 
-# contourf = ax.contourf(lons, lats, c2f(dwpt_sfc[0,:,:]), np.arange(-30, 92, 2), extent='both',
-#                  cmap=dwpt_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
+contourf = ax.contourf(lons, lats, c2f(dwpt_sfc[0,:,:]), np.arange(-30, 92, 2), extent='both',
+                 cmap=dwpt_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
 
-# # plot  wind barbs
-# every = 15
-# barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
-#                 uwnd_sfc[0, 0::every, 0::every], vwnd_sfc[0, 0::every, 0::every],
-#                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
+# plot  wind barbs
+every = 15
+barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+                uwnd_sfc[0, 0::every, 0::every], vwnd_sfc[0, 0::every, 0::every],
+                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'   RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'   MSLP (hPa), Dewpoint (F), Wind (kts)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-30, 90, 10), extendrect=True)
-# cax.text(3, 0.5, 'Dewpoint temperature (F)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
+# plot title, add one to the left with model name and data names, add another to the right with time info
+plt.figtext(0.08, 1.03, f'   RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
+plt.figtext(0.08, 1.00, f'    MSLP (hPa), Dewpoint (F), Wind (kts)', ha='left', fontsize=18, color='white')
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-30, 90, 10), extendrect=True)
+cax.text(3, 0.5, 'Dewpoint temperature (F)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar.ax.tick_params(axis='y', labelcolor='white') 
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+    t.set_fontsize(9)
+cbar.ax.set_facecolor('black')
 
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
+# add UND logo
+from PIL import Image
+img = Image.open('utils/images/und-logo.png')
+#                  side-side  up-down  size   size
+imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
+plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+imgax.imshow(img)
+imgax.axis('off')
 
-# plt.savefig("staged_figures/conus_rap_analysis/rap_sfc_dwpt.png", bbox_inches="tight")
+plt.savefig("staged_figures/conus_rap_analysis/rap_sfc_dwpt.png", bbox_inches="tight")
 
-# print("    FINISHED SFC DWPT MAP")
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
-# #############################################################################################################################################################################
+print("    FINISHED SFC DWPT MAP")
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
 
 
 
@@ -1052,29 +1052,37 @@ fig, ax = build_map(add_sat=True)
 
 # plot mslp
 cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
-                linewidths=3.0, linestyles='-',
-                transform=ccrs.PlateCarree(), zorder=11)
+                linewidths=2.0, linestyles='-',
+                transform=ccrs.PlateCarree(), alpha=1, zorder=11)
 plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 
-contourf = ax.contourf(lons, lats, cape_sfc, np.arange(100, 8100, 100), extend='max',
-                 cmap=cape_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
+
+contourf = ax.contourf(lons, lats, cape_ml, levels=np.arange(100, 6250, 250), extend='max',
+                 cmap=cape_cmap, transform=ccrs.PlateCarree(), zorder=4)
 
 # plot  wind barbs
 every = 15
 barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
                 uwnd_sfc[0, 0::every, 0::every], vwnd_sfc[0, 0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
+                
+ 
+cin_hatch = np.where(cin_ml[:,:] < -75, 1, np.nan)
+ax.contourf(lons, lats, cin_hatch, levels=[0.5, 1.5], colors='none', hatches=['////'],
+            transform=ccrs.PlateCarree(), zorder=12, alpha=0)
 
 # plot title, add one to the left with model name and data names, add another to the right with time info
 plt.figtext(0.08, 1.03, f'   RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-plt.figtext(0.08, 1.00, f'   MSLP (hPa), SBCAPE (J/kg), Wind (kts)', ha='left', fontsize=18, color='white')
+plt.figtext(0.08, 1.00, f'    MSLP (hPa), MLCAPE (J/kg), MLCIN (J/kg), Wind (kts)', ha='left', fontsize=18, color='white')
 plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
 cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(100, 8100, 200), extendrect=True)
-cax.text(3, 0.5, 'Surface Based Convective Available Potential Energy (J/kg)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', extendrect=True)
+# Use a subset of ticks so labels are legible and the bar matches the provided colorbar style
+cbar.set_ticks([100, 1000, 2000, 3000, 4000, 5000, 6000])
+cax.text(3.7, 0.5, '250hPa Mixed Layer Convective Available Potential Energy (J/kg)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
 cbar.ax.tick_params(axis='y', labelcolor='white') 
 for t in cbar.ax.get_yticklabels():
     t.set_fontweight('bold')
