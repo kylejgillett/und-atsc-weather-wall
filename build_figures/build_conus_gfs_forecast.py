@@ -67,7 +67,7 @@ box_size   = 50
 
 # pull rap data
 #forecast_hours = [int(hr) for hr in np.arange(6, 78, 6)]
-datas = gfs_forecast(box_size=box_size, forecast_hours=[21])
+datas = gfs_forecast(box_size=box_size, forecast_hours=[69])
 
 for fh, raw_data in datas.items():
 
@@ -178,7 +178,7 @@ for fh, raw_data in datas.items():
 
     # build map function
     def build_map(extent=[-122, -73, 21, 56], projection=ccrs.LambertConformal(), style='light', add_sat=False):
-        fig = plt.figure(figsize=(20, 10))
+        fig = plt.figure(figsize=(20, 10), dpi=250)
         fig.set_facecolor('#009946')
         ax = plt.axes(projection=projection)
 

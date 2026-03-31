@@ -31,7 +31,7 @@ import xarray as xr
 
 ### RAP ANALYSIS ###
 #########################################################################################################
-def analysis(center_lat=37.86, center_lon=-98.61, box_size=20):
+def analysis(center_lat=37.86, center_lon=-98.61, box_size=50):
     st = comp_time.time()
 
     print(f'    ACCESSING RAP DATA')

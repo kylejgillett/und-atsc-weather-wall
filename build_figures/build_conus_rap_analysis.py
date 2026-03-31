@@ -112,6 +112,47 @@ dwpt_sfc = mpcalc.dewpoint_from_relative_humidity(temp_sfc*units.degC, relh_sfc*
 cape_ml = ndimage.gaussian_filter(raw_data.variables['Convective_available_potential_energy_pressure_difference_layer'][0,0], sigma=sigma)
 cin_ml  = ndimage.gaussian_filter(raw_data.variables['Convective_inhibition_pressure_difference_layer'][0,0], sigma=sigma)
 
+# --- BUNKERS STORM MOTION --------------------------------------------------
+bunkers_sm_u = raw_data['U-Component_Storm_Motion_height_above_ground_layer'][0,0]
+bunkers_sm_v = raw_data['V-Component_Storm_Motion_height_above_ground_layer'][0,0]
+# If there is an extra layer dimension, take the first layer (or mean over it)
+# if 'layer' in bunkers_sm_u.dims or 'height_above_ground_layer' in bunkers_sm_u.dims:
+#     bunkers_sm_u = bunkers_sm_u.mean(dim=[d for d in ['layer','height_above_ground_layer'] if d in bunkers_sm_u.dims], skipna=True)
+#     bunkers_sm_v = bunkers_sm_v.mean(dim=[d for d in ['layer','height_above_ground_layer'] if d in bunkers_sm_v.dims], skipna=True)
+
+
+# --- STORM-RELATIVE MEAN WIND (6-9km and 0-2km) -----------------------------
+# 6-9km: use isobaric height levels if available
+hgt_iso = raw_data['Geopotential_height_isobaric'][0]
+mask_6_9km = (hgt_iso >= 6000) & (hgt_iso <= 9000)
+
+u_6_9km = raw_data['u-component_of_wind_isobaric'][0].where(mask_6_9km).mean(dim='isobaric', skipna=True)
+v_6_9km = raw_data['v-component_of_wind_isobaric'][0].where(mask_6_9km).mean(dim='isobaric', skipna=True)
+# else:
+#     # fallback 500-300 hPa if direct height range absent
+#     levs = raw_data['isobaric']
+#     cond = (levs >= 30000) & (levs <= 50000)
+#     u_6_9km = raw_data['u-component_of_wind_isobaric'][0].where(cond, drop=True).mean(dim='isobaric', skipna=True)
+#     v_6_9km = raw_data['v-component_of_wind_isobaric'][0].where(cond, drop=True).mean(dim='isobaric', skipna=True)
+
+# 0-2km: use height_above_ground variable if available, else near-surface isobaric blend
+#if 'height_above_ground' in raw_data.coords and 'u-component_of_wind_height_above_ground' in raw_data:
+u_0_2km = raw_data['u-component_of_wind_height_above_ground'][0].sel(height_above_ground=slice(0,2000)).mean(dim='height_above_ground', skipna=True)
+v_0_2km = raw_data['v-component_of_wind_height_above_ground'][0].sel(height_above_ground=slice(0,2000)).mean(dim='height_above_ground', skipna=True)
+# else:
+#     levs = raw_data['isobaric']
+#     cond0 = (levs >= 85000) & (levs <= 100000)
+#     u_0_2km = raw_data['u-component_of_wind_isobaric'][0].where(cond0, drop=True).mean(dim='isobaric', skipna=True)
+#     v_0_2km = raw_data['v-component_of_wind_isobaric'][0].where(cond0, drop=True).mean(dim='isobaric', skipna=True)
+
+srw_6_9_u = (u_6_9km - bunkers_sm_u) * 1.94384
+srw_6_9_v = (v_6_9km - bunkers_sm_v) * 1.94384
+srw_0_2_u = (u_0_2km - bunkers_sm_u) * 1.94384
+srw_0_2_v = (v_0_2km - bunkers_sm_v) * 1.94384
+
+
+
+
 #################################
 # CALCULATE FRONTOGENESIS
 ################################# 
@@ -173,57 +214,71 @@ adv = ndimage.gaussian_filter(adv, sigma=2, order=0) * units('K/sec')
 # get radar mosaic data
 radar_data, radar_lat, radar_lon, radar_time = get_latest_mosaic(utc_now[0], utc_now[1], utc_now[2])
 
+
+
 # get metar data
 metar_obs, metar_time = get_metar_data(reduced_to=150000)
 metar_obs['air_temperature'] = (metar_obs['air_temperature']* 9/5) + 32
 metar_obs['dew_point_temperature'] = (metar_obs['dew_point_temperature']* 9/5) + 32
+bad_metar = (metar_obs['air_temperature'] < -100) | (metar_obs['dew_point_temperature'] < -100)
+if bad_metar.any():
+    metar_obs = metar_obs[~bad_metar].reset_index(drop=True)
+
 
 # get satellite data
-output_filename = download_goes_file(utc_now[0],utc_now[4],utc_now[3],None)
+try:
+    output_filename = download_goes_file(utc_now[0],utc_now[4],utc_now[3],None)
 
-import time
-def wait_for_download(file_path, timeout=240):
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        if os.path.exists(file_path):
-            # check if the file is still being written to
-            try:
-                # attempt to open the file in read mode
-                with open(file_path, 'rb') as f:
-                    pass  # if it opens without error, it's done downloading
-                return True
-            except IOError:
-                pass
-        time.sleep(5)
-    return False
+    import time
+    def wait_for_download(file_path, timeout=240):
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            if os.path.exists(file_path):
+                # check if the file is still being written to
+                try:
+                    # attempt to open the file in read mode
+                    with open(file_path, 'rb') as f:
+                        pass  # if it opens without error, it's done downloading
+                    return True
+                except IOError:
+                    pass
+            time.sleep(5)
+        return False
 
-if wait_for_download(output_filename):
-    print(f"File '{output_filename}' download complete.")
-else:
-    print(f"File '{output_filename}' download timed out.")
+    if wait_for_download(output_filename):
+        print(f"File '{output_filename}' download complete.")
+    else:
+        print(f"File '{output_filename}' download timed out.")
 
 
-xrds = xr.open_dataset(output_filename)
-radiance = xrds.variables['Rad'][:]
+    xrds = xr.open_dataset(output_filename)
+    radiance = xrds.variables['Rad'][:]
 
-# Set time variables
-scan_start = datetime.strptime(xrds.time_coverage_start, '%Y-%m-%dT%H:%M:%S.%fZ')
-sat_time = scan_start.strftime('%H%M%S')
+    got_sat = True
 
-data = xrds.metpy.parse_cf('Rad')
-data_crs = data.metpy.cartopy_crs
-data_xcord = data.x
-data_ycord = data.y
+    # Set time variables
+    scan_start = datetime.strptime(xrds.time_coverage_start, '%Y-%m-%dT%H:%M:%S.%fZ')
+    sat_time = scan_start.strftime('%H%M%S')
 
-globe = ccrs.Globe(semimajor_axis=xrds['goes_imager_projection'].semi_major_axis,
-                   semiminor_axis=xrds['goes_imager_projection'].semi_minor_axis)
+    data = xrds.metpy.parse_cf('Rad')
+    data_crs = data.metpy.cartopy_crs
+    data_xcord = data.x
+    data_ycord = data.y
 
-crs = ccrs.Geostationary(central_longitude=xrds['goes_imager_projection'].longitude_of_projection_origin,
-                         satellite_height=xrds['goes_imager_projection'].perspective_point_height,
-                         globe=globe)
-proj = ccrs.LambertConformal(globe=globe)
+    globe = ccrs.Globe(semimajor_axis=xrds['goes_imager_projection'].semi_major_axis,
+                    semiminor_axis=xrds['goes_imager_projection'].semi_minor_axis)
 
-xrds.close()
+    crs = ccrs.Geostationary(central_longitude=xrds['goes_imager_projection'].longitude_of_projection_origin,
+                            satellite_height=xrds['goes_imager_projection'].perspective_point_height,
+                            globe=globe)
+    proj = ccrs.LambertConformal(globe=globe)
+
+    xrds.close()
+
+except:
+    got_sat = False
+    pass
+
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -232,12 +287,11 @@ xrds.close()
 
 
 
-
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 
-# build map function
+# build map function | -118, -76, 22, 52
 def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.LambertConformal(), style='light'):
     fig = plt.figure(figsize=(20, 10), dpi=250)
     fig.set_facecolor('#009946')
@@ -253,10 +307,11 @@ def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.Lambert
         color = 'black'
         alpha = 0.8
 
-    ax.add_feature(cfeature.STATES, edgecolor='navy', alpha=0.4, linestyle='-', linewidth=3, zorder=10)
+    #ax.add_feature(cfeature.STATES, edgecolor='navy', alpha=0.4, linestyle='-', linewidth=3, zorder=10)
+    ax.add_feature(cfeature.STATES, edgecolor='navy', alpha=1.0, linestyle='-', linewidth=1, zorder=10)
     ax.add_feature(cfeature.LAND, facecolor=color, alpha=alpha, zorder=0.1)
     ax.add_feature(cfeature.OCEAN, facecolor=color, alpha=alpha + 0.2, zorder=0)
-    ax.add_feature(cfeature.COASTLINE, color='navy', alpha=0.4, linestyle='-', linewidth=3, zorder=11)
+    ax.add_feature(cfeature.COASTLINE, color='navy', alpha=1, linestyle='-', linewidth=2, zorder=11)
     if add_sat:
         from cartopy.io import img_tiles
         satellite = img_tiles.GoogleTiles(style='satellite')
@@ -269,6 +324,8 @@ def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.Lambert
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 
+
+    
 
 
 
@@ -730,10 +787,11 @@ tadv_contourf = ax.contourf(raw_data['lon'], raw_data['lat'], 3*(mpcalc.smooth_n
 
 ax.contour(lons, lats, temp_850, levels=[0], linewidths=3, linestyles='--', colors='gray', transform=ccrs.PlateCarree(), zorder=5)  
 
-# plot filled contours pf frontogenesis > 2 delta deg C / hr
-fgen_contourf = ax.contour(raw_data['lon'], raw_data['lat'], fgen_masked[0,plev850,:,:], 
-                           np.arange(1, 32, 2), colors='navy', linestyles='-',
-                           transform=ccrs.PlateCarree(), zorder=4)
+# plot frontogenesis hatch (> 2 degC / 100km / 3hr)
+fgen_hatch = np.where(fgen_masked[0,plev850,:,:].values >= 2, 1, np.nan)
+ax.contourf(raw_data['lon'], raw_data['lat'], fgen_hatch,
+            levels=[0.5, 1.5], colors='none', hatches=['////'], alpha=0,
+            transform=ccrs.PlateCarree(), zorder=6)
 
 # plot 850hpa wind barbs
 every = 15
@@ -1052,30 +1110,48 @@ fig, ax = build_map(add_sat=True)
 
 # plot mslp
 cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
-                linewidths=2.0, linestyles='-',
+                linewidths=2, linestyles='-',
                 transform=ccrs.PlateCarree(), alpha=1, zorder=11)
 plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 
 
-contourf = ax.contourf(lons, lats, cape_ml, levels=np.arange(100, 6250, 250), extend='max',
-                 cmap=cape_cmap, transform=ccrs.PlateCarree(), zorder=4)
+contourf = ax.contourf(lons, lats, cape_ml, levels=np.arange(100, 5000, 100), extend='max',
+                 cmap=cape_cmap, transform=ccrs.PlateCarree(), alpha=0.7, zorder=4)
 
-# plot  wind barbs
+
+
+
+# plot storm-relative mean wind barbs (6-9km and 0-2km)
 every = 15
-barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
-                uwnd_sfc[0, 0::every, 0::every], vwnd_sfc[0, 0::every, 0::every],
-                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
-                
- 
-cin_hatch = np.where(cin_ml[:,:] < -75, 1, np.nan)
+
+mask = cape_ml > 50
+# 6–9 km SRMW
+barbs_6_9 = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+    np.where(mask[0::every, 0::every],srw_6_9_u.values[0::every, 0::every], np.nan),
+    np.where(mask[0::every, 0::every],srw_6_9_v.values[0::every, 0::every], np.nan),
+    length=5.5, color='darkblue', alpha=0.8, transform=ccrs.PlateCarree(), zorder=14)
+
+# 0–2 km SRMW
+barbs_0_2 = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+    np.where(mask[0::every, 0::every], srw_0_2_u.values[0::every, 0::every], np.nan),
+    np.where(mask[0::every, 0::every], srw_0_2_v.values[0::every, 0::every], np.nan),
+    length=5.5, color='darkred', alpha=1, transform=ccrs.PlateCarree(), zorder=14)
+
+
+# plot MLCIN as a hatch
+import matplotlib as mpl
+mpl.rcParams['hatch.linewidth'] = 0.3
+cin_hatch = np.where(cin_ml[:,:] < -40, 1, np.nan)
 ax.contourf(lons, lats, cin_hatch, levels=[0.5, 1.5], colors='none', hatches=['////'],
-            transform=ccrs.PlateCarree(), zorder=12, alpha=0)
+    edgecolors='red', linewidths=0.05, transform=ccrs.PlateCarree(), zorder=13, alpha=0)
+
+
 
 # plot title, add one to the left with model name and data names, add another to the right with time info
 plt.figtext(0.08, 1.03, f'   RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-plt.figtext(0.08, 1.00, f'    MSLP (hPa), MLCAPE (J/kg), MLCIN (J/kg), Wind (kts)', ha='left', fontsize=18, color='white')
+plt.figtext(0.08, 1.00, f'    MSLP (hPa), MLCAPE (J/kg), MLCIN (<-40 J/kg), 6-9km (gray) & 0-2km (black) SRW Crossover', ha='left', fontsize=18, color='white')
 plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
 cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
@@ -1104,7 +1180,6 @@ print("    FINISHED SFC CAPE MAP")
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
-
 
 
 
@@ -1151,19 +1226,21 @@ pm = ax.pcolormesh(radar_lon+0.05, radar_lat+0.05, radar_data,
 # plot wpc fronts bulletin
 texts, params, geoms, valid_time = plot_bulletin(ax)
 
-# plot recent satellite data
-ax.imshow(radiance.values, origin='upper', cmap=ir_greys, vmin=50, vmax=130,
-           extent=(data_xcord.values.min(), data_xcord.values.max(), data_ycord.values.min(), data_ycord.values.max()),
-           regrid_shape=2000,
-           aspect='auto',
-           interpolation='gaussian',
-           transform=crs,
-           alpha=0.8, zorder=1)
+
+if got_sat:
+    # plot recent satellite data
+    ax.imshow(radiance.values, origin='upper', cmap=ir_greys, vmin=50, vmax=130,
+            extent=(data_xcord.values.min(), data_xcord.values.max(), data_ycord.values.min(), data_ycord.values.max()),
+            regrid_shape=2000,
+            aspect='auto',
+            interpolation='gaussian',
+            transform=crs,
+            alpha=0.8, zorder=1)
 
 
 # plot title, add one to the left with model name and data names, add another to the right with time info
 plt.figtext(0.08, 1.03, f'     RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-plt.figtext(0.08, 1.00, f'      RAP MSLP (hPa), {metar_time[11:16]}z METARs, {valid_time}z WPC Fronts, {str(radar_time)[11:16]}z Reflectivity Mosaic, {sat_time[0:2]}:{sat_time[2:4]}z GOES19 Radiance', ha='left', fontsize=18, color='white')
+plt.figtext(0.08, 1.00, f'     RAP MSLP (hPa), {metar_time[11:16]}z METARs, {valid_time}z WPC Fronts, {str(radar_time)[11:16]}z Reflectivity Mosaic, {sat_time[0:2]}:{sat_time[2:4]}z GOES19 Radiance', ha='left', fontsize=18, color='white')
 # plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 # # colorbar for filled contour
 # cbar = plt.colorbar(pm, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
@@ -1199,5 +1276,7 @@ print("    FINISHED SFC ANL MAP")
 #############################################################################################################################################################################
 
 
+
 elapsed_time = comp_time.time() - st
 print(f"############\nSCRIPT FINISHED: time: {comp_time.strftime('%H:%M:%S', comp_time.gmtime(elapsed_time))}\n############")
+

@@ -120,7 +120,7 @@ for outlook, outlook_day in zip(outlooks, range(1,4)):
 
     def build_map(extent=[-120, -73, 21, 53], projection=ccrs.LambertConformal(), style='light'):
 
-        fig = plt.figure(figsize=(20, 10))
+        fig = plt.figure(figsize=(20, 10), dpi=250)
         fig.set_facecolor('#009946')
         ax = plt.axes(projection=projection)
 

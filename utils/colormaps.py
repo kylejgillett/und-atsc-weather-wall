@@ -105,17 +105,16 @@ nws_cmap  = LinearSegmentedColormap.from_list('nws_reflect',['lightsteelblue','s
 
 
 
+
+
+########### PIV WX STYLE CAPE CMAP ###########
 cape_colors = [
-    # CAPE colormap (based on provided guide) with increasing opacity
-    ("#6b8d97f1"),  # very light gray, mostly transparent
-    ("#4c659bf9"),  # light blue
-    ("#397efffc"),  # cyan
-    ("#40ffc9ff"),  # green
-    ("#40ff6dff"),  # yellow
-    ("#f2ff00ff"),  # orange
-    ("#ffac40ff"),  # red
-    ("#c04000ff"),  # magenta
-    ("#800037ff"),  # purple, fully opaque
+    '#d2d2d2','#c3c3c3','#a4a4a4','#a5a5a5','#969696','#878787','#696969',
+    '#37536a','#436075','#4f6c7f','#5b798a','#7594a2','#7493a1','#82a1ad',
+    '#9abac2','#a7c8ce','#e8dc96','#e7d086','#e6c474','#e6b865','#e5a044',
+    '#e49433','#e28723','#e27b12','#e16f02','#db4010','#d33b17','#c12e25',
+    '#a51b3a','#9c1441','#8b0950','#720889','#7e1894','#9437a8','#a148b3',
+    '#ab59bd','#b768c7','#c278d1','#ce89dc','#da99e7','#e8bdc2'
 ]
 
 cape_cmap = LinearSegmentedColormap.from_list("cape_cmap", cape_colors, N=256)
