@@ -104,7 +104,7 @@ center_lat = 47.5
 center_lon = -97.5
 # center_lat = 48.175946 
 # center_lon = -106.639628
-box_size = 2
+box_size = 1.8
 fig, ax = build_map(extent=[center_lon-box_size, center_lon+box_size, center_lat-box_size, center_lat+box_size],
                     projection=ccrs.Mercator())
 
@@ -124,6 +124,9 @@ try:
         (metar_obs['longitude'] >= center_lon - box_size*2) & (metar_obs['longitude'] <= center_lon + box_size*2)]
     filtered_metars['air_temperature'] = (filtered_metars['air_temperature']* 9/5) + 32
     filtered_metars['dew_point_temperature'] = (filtered_metars['dew_point_temperature']* 9/5) + 32
+    bad_metar = (filtered_metars['air_temperature'] < -100) | (filtered_metars['dew_point_temperature'] < -100)
+    if bad_metar.any():
+        filtered_metars = filtered_metars[~bad_metar].reset_index(drop=True)
 
     custom_layout = StationPlotLayout()
     custom_layout.add_barb('eastward_wind', 'northward_wind', units='knots', path_effects=BARB_OUTLINE)

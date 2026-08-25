@@ -67,7 +67,7 @@ box_size   = 50
 
 # pull rap data
 #forecast_hours = [int(hr) for hr in np.arange(6, 78, 6)]
-datas = gfs_forecast(box_size=box_size, forecast_hours=[69])
+datas = gfs_forecast(box_size=box_size, forecast_hours=[39])
 
 for fh, raw_data in datas.items():
 

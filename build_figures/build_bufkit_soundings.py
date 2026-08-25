@@ -29,7 +29,7 @@ if project_root not in sys.path:
 #################################
 # KGFK BUFKIT SOUNDING
 #################################
-gfk_data = spy.get_bufkit_data('hrrr', "kgfk", 0)
+gfk_data = spy.get_bufkit_data('hrrr', "kgfk", 1)
 
 spy.build_sounding(gfk_data, special_parcels='simple', map_zoom=1, color_blind=True, radar='mosaic',
                    save=True, filename="staged_figures/soundings/gfk_rap_sounding.png")

@@ -1,6 +1,6 @@
 ##########################################################
-#              RAP ANALYSIS FIGURES SCRIPT
-#  (c) KYLE J GILLETT, UNIVERSITY OF NORTH DAKOTA, 2025
+#          REGIONAL RAP ANALYSIS FIGURES SCRIPT
+#  (c) KYLE J GILLETT, UNIVERSITY OF NORTH DAKOTA, 2026
 ##########################################################
 
 print("############\nSCRIPT RUNNING\n############")
@@ -60,17 +60,25 @@ def c2f(celsius_array):
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
-# set up rap retrieval 
-center_lat = 46.841203
-center_lon = -98.777673
-box_size   = 50
-west = center_lon  - box_size
-east = center_lon  + box_size
-south = center_lat - box_size
-north = center_lat + box_size
+
+
+# set up rap retrieval
+# center_lat = 46.5
+# center_lon = -97.5
+
+center_lat = 43.23
+center_lon = -94.76
+
+map_box_size = 7
+
+data_box_size   = 20
+west = center_lon  - data_box_size
+east = center_lon  + data_box_size
+south = center_lat - data_box_size
+north = center_lat + data_box_size
 
 # pull rap data
-raw_data = analysis(box_size=box_size)
+raw_data = analysis(box_size=data_box_size)
 
 # LATS & LONS
 lats = raw_data.variables['lat'][:]
@@ -196,7 +204,7 @@ radar_data, radar_lat, radar_lon, radar_time = get_latest_mosaic(utc_now[0], utc
 
 
 # get metar data
-metar_obs, metar_time = get_metar_data(reduced_to=150000)
+metar_obs, metar_time = get_metar_data(reduced_to=50000)
 metar_obs['air_temperature'] = (metar_obs['air_temperature']* 9/5) + 32
 metar_obs['dew_point_temperature'] = (metar_obs['dew_point_temperature']* 9/5) + 32
 bad_metar = (metar_obs['air_temperature'] < -100) | (metar_obs['dew_point_temperature'] < -100)
@@ -270,8 +278,13 @@ except:
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 
+map_west = center_lon  - map_box_size
+map_east = center_lon  + map_box_size
+map_south = center_lat - map_box_size
+map_north = center_lat + map_box_size
+
 # build map function | -118, -76, 22, 52
-def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.LambertConformal(), style='light'):
+def build_map(extent=[map_west, map_east, map_south, map_north], add_sat=False, projection=ccrs.LambertConformal(), style='light'):
     fig = plt.figure(figsize=(20, 10), dpi=250)
     fig.set_facecolor('#009946')
     ax = plt.axes(projection=projection)
@@ -306,7 +319,7 @@ def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.Lambert
 
 
 
-
+'''
 
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -446,7 +459,7 @@ print("    FINISHED 300HPA FLOW MAP")
 
 
 
-
+'''
 
 
 
@@ -478,7 +491,7 @@ contourf = ax.contourf(lons, lats, wdsp_500, np.arange(30, 140, 5), extend='max'
                  cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
 
 # plot 500 hpa wind barbs
-every = 20
+every = 10
 barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
                 uwnd_500[0::every, 0::every], vwnd_500[0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
@@ -552,7 +565,7 @@ vort_cf = ax.contourf(lons, lats, vor_500 * 10**5, np.arange(-30, 52, 2),
                       norm=norm, extend='both', cmap='PuOr_r', zorder=5, alpha=1, transform=ccrs.PlateCarree())
 
 # plot wind barbs
-every = 20
+every = 10
 barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
                 uwnd_500[0::every, 0::every], vwnd_500[0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
@@ -618,7 +631,7 @@ vortadv_cf = ax.contourf(lons, lats, ndimage.gaussian_filter(relvort_adv, 4), np
                              extend='both', cmap='bwr', zorder=5, alpha=1, transform=ccrs.PlateCarree())
 
 # plot 500hpa wind barbs
-every = 20
+every = 10
 barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
                 uwnd_500[0::every, 0::every], vwnd_500[0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
@@ -696,7 +709,7 @@ contourf = ax.contourf(lons, lats, temp_700, np.arange(-40, 42, 1), extent='both
                  cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
 
 # plot 700hpa wind barbs
-every = 15
+every = 10
 barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
                 uwnd_700[0::every, 0::every], vwnd_700[0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
@@ -778,7 +791,7 @@ try:
                 transform=ccrs.PlateCarree(), zorder=6)
 
     # plot 850hpa wind barbs
-    every = 15
+    every = 10
     barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
                     uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
@@ -848,7 +861,7 @@ contourf = ax.contourf(lons, lats, wdsp_850, np.arange(20, 85, 5), extend='max',
 
 
 # plot 850hpa wind barbs
-every = 15
+every = 10
 barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
                 uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
@@ -918,7 +931,7 @@ contourf = ax.contourf(lons, lats, temp_850, np.arange(-40, 42, 1), extent='both
                  cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
 
 # plot 850hpa wind barbs
-every = 15
+every = 10
 barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
                 uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
@@ -983,7 +996,7 @@ contourf = ax.contourf(lons, lats, c2f(temp_sfc[0,:,:]), np.arange(-60, 121, 1),
                  cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
 
 # plot  wind barbs
-every = 15
+every = 10
 barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
                 uwnd_sfc[0, 0::every, 0::every], vwnd_sfc[0, 0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
@@ -1049,7 +1062,7 @@ contourf = ax.contourf(lons, lats, c2f(dwpt_sfc[0,:,:]), levels, norm=norm, exte
                  cmap=dwpt_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
 
 # plot  wind barbs
-every = 15
+every = 10
 barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
                 uwnd_sfc[0, 0::every, 0::every], vwnd_sfc[0, 0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
@@ -1116,7 +1129,7 @@ contourf = ax.contourf(lons, lats, cape_ml, levels=np.arange(100, 5000, 100), ex
 
 
 # plot storm-relative mean wind barbs (6-9km and 0-2km)
-every = 15
+every = 10
 
 mask = cape_ml > 50
 # 6–9 km SRMW
@@ -1205,10 +1218,15 @@ custom_layout.plot(stationplot, metar_obs)
 
 
 # plot mslp
-cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
+cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 2), colors='black',
                 linewidths=2.0, linestyles='-',
                 transform=ccrs.PlateCarree(), zorder=11)
 plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+           rightside_up=True, use_clabeltext=True)
+
+dpcs = ax.contour(lons, lats, c2f(dwpt_sfc[0,:,:]), levels=[45, 50, 55, 60, 65, 70, 75], colors='darkgreen',
+           linewidths=1, linestyles='--', transform=ccrs.PlateCarree(), zorder=5)  
+plt.clabel(dpcs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 # plot nexrad mosaic
