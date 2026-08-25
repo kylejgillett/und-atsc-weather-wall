@@ -31,13 +31,14 @@ import xarray as xr
 
 ### RAP ANALYSIS ###
 #########################################################################################################
-def analysis(center_lat=37.86, center_lon=-98.61, box_size=20):
+def analysis(center_lat=37.86, center_lon=-98.61, box_size=50):
     st = comp_time.time()
 
     print(f'    ACCESSING RAP DATA')
 
     # define dataset URL & try to access it to make sure it works
     url = 'http://thredds.ucar.edu/thredds/catalog/grib/NCEP/RAP/CONUS_13km/latest.xml'
+    #url = 'http://thredds.ucar.edu/thredds/catalog/grib/NCEP/HRRR/CONUS_2p5km_ANA/latest.xml'
     #url = 'https://thredds.ucar.edu/thredds/ncss/grid/grib/NCEP/RAP/CONUS_13km/RR_CONUS_13km_20250315_1800.grib2'
     try:
         cat = TDSCatalog(url)
@@ -71,6 +72,9 @@ def analysis(center_lat=37.86, center_lon=-98.61, box_size=20):
                     'u-component_of_wind_height_above_ground', 'v-component_of_wind_height_above_ground',
                     'u-component_of_wind_isobaric', 'v-component_of_wind_isobaric',
                     'Convective_available_potential_energy_surface',
+                    'Convective_inhibition_surface',
+                    'Convective_available_potential_energy_pressure_difference_layer',
+                    'Convective_inhibition_pressure_difference_layer',
                     'Storm_relative_helicity_height_above_ground_layer',
                     'U-Component_Storm_Motion_height_above_ground_layer',
                     'V-Component_Storm_Motion_height_above_ground_layer').add_lonlat()

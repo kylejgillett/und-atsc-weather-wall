@@ -19,13 +19,11 @@ import fsspec
 from datetime import datetime, timedelta, timezone
 
 
-def get_radar(date=datetime.now(timezone.utc)):
+def get_radar(date=datetime.now(timezone.utc), nexrad_site="KMVX"):
 
     curr_dt = date
     time = curr_dt.strftime('%H%M')
     datestr = curr_dt.strftime('%Y%m%d')
-
-    nexrad_site = "KMVX"
 
     fs = fsspec.filesystem('s3', anon=True)
     # try current time, then fallback to previous hour if needed

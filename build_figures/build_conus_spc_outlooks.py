@@ -43,8 +43,8 @@ target_dt = datetime.now(timezone.utc)
 # SPC outlook issue times
 valid_times = {
     1: ["0600", "1300", "1630", "2000"],  # Day 1 outlooks
-    2: ["0700", "1730"],                  # Day 2 outlooks
-    3: ["0830"],                          # Day 3 outlooks
+    2: ["0600", "1730"],                  # Day 2 outlooks
+    3: ["0730"],                          # Day 3 outlooks
 }
 
 # Example for day 1
@@ -76,9 +76,8 @@ for outlook_day in range(1,4):
         if outlook_url is not None:
             break
 
-    # if outlook_url is None:
-    #     raise FileNotFoundError("No valid SPC outlook found for target or previous day.")
-
+    if outlook_url is None:
+        raise FileNotFoundError("No valid SPC outlook found for target or previous day.")
 
 
 for outlook, outlook_day in zip(outlooks, range(1,4)):
@@ -121,7 +120,7 @@ for outlook, outlook_day in zip(outlooks, range(1,4)):
 
     def build_map(extent=[-120, -73, 21, 53], projection=ccrs.LambertConformal(), style='light'):
 
-        fig = plt.figure(figsize=(20, 10))
+        fig = plt.figure(figsize=(20, 10), dpi=250)
         fig.set_facecolor('#009946')
         ax = plt.axes(projection=projection)
 

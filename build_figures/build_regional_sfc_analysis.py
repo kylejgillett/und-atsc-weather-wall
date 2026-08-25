@@ -13,6 +13,7 @@ warnings.filterwarnings("ignore")
 
 import scipy.ndimage as ndimage
 import metpy.calc as mpcalc
+from metpy.plots import USCOUNTIES
 from metpy.units import units
 import cartopy.crs   as ccrs
 import cartopy.feature as cfeature
@@ -59,16 +60,19 @@ utc_now = [utc_date.strftime("%Y"), utc_date.strftime("%m"), utc_date.strftime("
 
 
 # set up rap retrieval 
-center_lat = 46.841203
-center_lon = -98.777673
-box_size   = 6.5
+# GFK CENTERED
+center_lat, center_lon = 46.841203, -98.777673
+# OTHER
+#center_lat, center_lon = 40.150721, -74.518198
+
+box_size   = 4.5 # 6.5
 west = center_lon  - box_size
 east = center_lon  + box_size
 south = center_lat - box_size
 north = center_lat + box_size
 
 # pull rap data
-raw_data = analysis(center_lat, center_lon, box_size=box_size)
+raw_data = analysis(center_lat, center_lon, box_size=12)
 
 # LATS & LONS
 lats = raw_data.variables['lat'][:]
@@ -106,12 +110,12 @@ dwpt_sfc = mpcalc.dewpoint_from_relative_humidity(temp_sfc*units.degC, relh_sfc*
 
 # build mpa function
 def build_map(extent=[west, east, south, north], projection=ccrs.LambertConformal(), style='light'):
-    fig = plt.figure(figsize=(20, 12))
+    fig = plt.figure(figsize=(20, 10), dpi=250)
     fig.set_facecolor('#009946')
     ax = plt.axes(projection=projection)
 
     ax.set_extent(extent)
-    ax.set_box_aspect(0.7)
+    ax.set_box_aspect(0.6)
 
     if style == 'light':
         color = 'gray'
@@ -120,10 +124,10 @@ def build_map(extent=[west, east, south, north], projection=ccrs.LambertConforma
         color = 'black'
         alpha = 0.8
 
-    ax.add_feature(cfeature.STATES, edgecolor='navy', alpha=0.5, linestyle='-', linewidth=2, zorder=10)
+    ax.add_feature(cfeature.STATES, edgecolor='navy', alpha=1, linestyle='-', linewidth=1, zorder=10)
     ax.add_feature(cfeature.LAND, facecolor=color, alpha=alpha, zorder=1)
     ax.add_feature(cfeature.OCEAN, facecolor=color, alpha=alpha + 0.2, zorder=0)
-    ax.add_feature(cfeature.COASTLINE, color='navy', alpha=0.5, linestyle='-', linewidth=2, zorder=11)
+    ax.add_feature(cfeature.COASTLINE, color='navy', alpha=1, linestyle='-', linewidth=1, zorder=11)
 
     plt.tight_layout()
 
@@ -133,10 +137,19 @@ def build_map(extent=[west, east, south, north], projection=ccrs.LambertConforma
 # get radar mosaic data
 radar_data, radar_lat, radar_lon, radar_time = get_latest_mosaic(utc_now[0], utc_now[1], utc_now[2])
 
-# get metar data
-metar_obs, metar_time = get_metar_data(reduced_to=50000)
-metar_obs['air_temperature'] = (metar_obs['air_temperature']* 9/5) + 32
-metar_obs['dew_point_temperature'] = (metar_obs['dew_point_temperature']* 9/5) + 32
+try:
+    # get metar data
+    metar_obs, metar_time = get_metar_data(reduced_to=50000)
+    metar_obs['air_temperature'] = (metar_obs['air_temperature']* 9/5) + 32
+    metar_obs['dew_point_temperature'] = (metar_obs['dew_point_temperature']* 9/5) + 32
+    got_metar = True
+
+    # filter out invalid engineered outliers (sensor/missing-value sentinel), do not plot these
+    bad_metar = (metar_obs['air_temperature'] < -100) | (metar_obs['dew_point_temperature'] < -100)
+    if bad_metar.any():
+        metar_obs = metar_obs[~bad_metar].reset_index(drop=True)
+except:
+    pass
 
 # get satellite data
 output_filename = download_goes_file(utc_now[0],utc_now[4],utc_now[3],None)
@@ -183,6 +196,16 @@ crs = ccrs.Geostationary(central_longitude=xrds['goes_imager_projection'].longit
                          globe=globe)
 proj = ccrs.LambertConformal(globe=globe)
 
+
+
+#from metpy.calc import brightness_temperature
+#from metpy.units import units
+
+# This handles the Planck function conversion for you
+#bt = brightness_temperature(xrds['Rad'])
+
+
+
 xrds.close()
 
 
@@ -199,23 +222,25 @@ xrds.close()
 
 fig, ax = build_map(style='dark')
 
+ax.add_feature(USCOUNTIES.with_scale('20m'), alpha=0.1, edgecolor='black', linestyle='-', lw=0.5, zorder=12.1)
 
-###################################################################
-# METAR STATION PLOTS
-###################################################################
-from metpy.plots import StationPlot, StationPlotLayout, sky_cover
-from matplotlib.patheffects import withStroke
-TEXT_OUTLINE = [withStroke(linewidth=1, foreground=(0, 0, 0, 0.3))]
-BARB_OUTLINE = [withStroke(linewidth=2, foreground=(0, 0, 0, 0.5))]
+if got_metar:
+    ###################################################################
+    # METAR STATION PLOTS
+    ###################################################################
+    from metpy.plots import StationPlot, StationPlotLayout, sky_cover
+    from matplotlib.patheffects import withStroke
+    TEXT_OUTLINE = [withStroke(linewidth=1, foreground=(0, 0, 0, 0.3))]
+    BARB_OUTLINE = [withStroke(linewidth=2, foreground=(0, 0, 0, 0.5))]
 
-custom_layout = StationPlotLayout()
-custom_layout.add_barb('eastward_wind', 'northward_wind', units='knots', path_effects=BARB_OUTLINE)
-custom_layout.add_value('NW', 'air_temperature', fmt='.0f', color='orangered', fontweight='bold', path_effects=TEXT_OUTLINE)
-custom_layout.add_value('SW', 'dew_point_temperature', fmt='.0f', color='palegreen', fontweight='bold', path_effects=TEXT_OUTLINE)
-custom_layout.add_symbol('C', 'cloud_coverage', sky_cover, path_effects=TEXT_OUTLINE)
-stationplot = StationPlot(ax, metar_obs['longitude'], metar_obs['latitude'], clip_on=True,
-                          transform=ccrs.PlateCarree(), fontsize=9, zorder=12, color='white', alpha=1)
-custom_layout.plot(stationplot, metar_obs)
+    custom_layout = StationPlotLayout()
+    custom_layout.add_barb('eastward_wind', 'northward_wind', units='knots', path_effects=BARB_OUTLINE)
+    custom_layout.add_value('NW', 'air_temperature', fmt='.0f', color='orangered', fontweight='bold', path_effects=TEXT_OUTLINE)
+    custom_layout.add_value('SW', 'dew_point_temperature', fmt='.0f', color='palegreen', fontweight='bold', path_effects=TEXT_OUTLINE)
+    custom_layout.add_symbol('C', 'cloud_coverage', sky_cover, path_effects=TEXT_OUTLINE)
+    stationplot = StationPlot(ax, metar_obs['longitude'], metar_obs['latitude'], clip_on=True,
+                            transform=ccrs.PlateCarree(), fontsize=9, zorder=12, color='white', alpha=1)
+    custom_layout.plot(stationplot, metar_obs)
 
 
 ###################################################################
@@ -232,7 +257,7 @@ plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
 # RADAR MOSAIC
 ###################################################################
 pm = ax.pcolormesh(radar_lon+0.05, radar_lat+0.05, radar_data,
-              vmin=-15, vmax=95, cmap=rs_expertreflect_cmap, alpha=0.8, zorder=1.3, transform=ccrs.PlateCarree())
+              vmin=-32, vmax=95, cmap=rs_expertreflect_cmap, alpha=0.8, zorder=1.3, transform=ccrs.PlateCarree())
 
 ###################################################################
 # LATEST FRONTS BULLETIN
@@ -245,6 +270,7 @@ texts, params, geoms, valid_time = plot_bulletin(ax)
 ###################################################################
 # SATELLITE DATA
 ###################################################################
+# plot recent satellite data
 ax.imshow(radiance.values, origin='upper', cmap=ir_greys, vmin=50, vmax=130,
            extent=(data_xcord.values.min(), data_xcord.values.max(), data_ycord.values.min(), data_ycord.values.max()),
            regrid_shape=2000,
@@ -254,18 +280,26 @@ ax.imshow(radiance.values, origin='upper', cmap=ir_greys, vmin=50, vmax=130,
            alpha=0.8, zorder=1)
 
 
-
 #################################
 # ADD MAP EXTRAS
 #################################
 # plot title, add one to the left with model name and data names, add another to the right with time info
 plt.figtext(0.08, 1.03, f'   RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-plt.figtext(0.08, 1.00, f'    RAP MSLP (hPa), {metar_time[11:16]}z METARs, {valid_time}z WPC Fronts, {str(radar_time)[11:16]}z Reflectivity Mosaic, {sat_time[0:2]}:{sat_time[2:4]}z GOES16 Radiance', ha='left', fontsize=18, color='white')
+plt.figtext(0.08, 1.00, f'   RAP MSLP (hPa), {metar_time[11:16]}z METARs, {valid_time}z WPC Fronts, {str(radar_time)[11:16]}z Reflectivity Mosaic, {sat_time[0:2]}:{sat_time[2:4]}z GOES16 Radiance', ha='left', fontsize=18, color='white')
 plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# colorbar for filled contour
-cbar = plt.colorbar(pm, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-cbar.set_label('Reflectivity (dBz)', fontsize=15, color='white')
-
+# # colorbar for filled contour
+# cbar = plt.colorbar(pm, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
+# cbar.set_label('Reflectivity (dBz)', fontsize=15, color='white')
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+cbar = fig.colorbar(pm, cax=cax, orientation='vertical', ticks=np.arange(-30, 100, 5), extendrect=True)
+cax.text(3, 0.5, 'Reflectivity (dBz)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar.ax.tick_params(axis='y', labelcolor='white') 
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+    t.set_fontsize(9)
+cbar.ax.set_facecolor('black')
 
 # add UND logo
 from PIL import Image

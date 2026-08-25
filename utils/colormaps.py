@@ -13,6 +13,23 @@ ir_colors = [(1, 1, 1), (0.6, 0.6, 0.6), (0.3, 0.3, 0.3), (0, 0, 0)]
 ir_greys = mcolors.LinearSegmentedColormap.from_list("ir_greys", ir_colors, N=256)
 
 
+########### DEWPOINT COLORMAP ###########
+dwpt_colors = [
+    (0.00, '#634235'), # -40: Dark Brown
+    (0.20, '#96816D'), # -14: Muted Brown
+    (0.30, '#EBE7D3'), # -1: Light Tan
+    (0.40, '#D8E5C1'), # 12: Pale Green starts
+    (0.55, '#6BB35F'), # 31: Vibrant Green
+    (0.75, '#1E6E32'), # 57: Deep Green persists longer
+    (0.82, '#3E5D61'), # 66: Teal (Transition begins later)
+    (0.88, '#2E3A4A'), # 74: Deep Navy/Charcoal
+    (0.94, '#5C4A8D'), # 82: Deep Purple
+    (1.00, '#B28EA1')  # 90: Light Pink/Mauve
+    ]
+
+dwpt_cmap = LinearSegmentedColormap.from_list("dwpt_cmap", dwpt_colors, N=256)
+
+
 
 ########### PIVITOL WX STYLE TEMPERATURE CMAP ###########
 temp_colors = [(0.000, '#B3ECE0'), (0.125, '#A08AC6'),(0.250, '#8C28AC'),(0.375, '#D4E2E8'),
@@ -71,6 +88,13 @@ rgb = rs_data[:, 1:] / 255.0
 levels = rs_data[:, 0]
 rs_expertreflect_cmap = ListedColormap(rgb)
 
+script_dir = os.path.dirname(os.path.abspath(__file__))
+txt_file_path = os.path.join(script_dir,"rs_basevelocity_colormap.txt")
+rs_data = np.loadtxt(txt_file_path, skiprows=3, usecols=(1, 2, 3, 4))
+rgb = rs_data[:, 1:] / 255.0
+levels = rs_data[:, 0]
+rs_basevelocity_cmap = ListedColormap(rgb)
+
 
 
 ########### NWS STYLE REFLECTIVITY CMAP ###########
@@ -78,3 +102,19 @@ nws_cmap  = LinearSegmentedColormap.from_list('nws_reflect',['lightsteelblue','s
                                                                [255/255,255/255,77/255],[230/255,230/255,0],[255/255,195/255,77/255],
                                                                [230/255,153/255,0],[255/255,77/255,77/255],[230/255,0,0],[255/255,204/255,238/255],
                                                                [255/255,25/255,140/255],[212/255,0,255/255],[85/255,0,128/255]],N=256)
+
+
+
+
+
+########### PIV WX STYLE CAPE CMAP ###########
+cape_colors = [
+    '#d2d2d2','#c3c3c3','#a4a4a4','#a5a5a5','#969696','#878787','#696969',
+    '#37536a','#436075','#4f6c7f','#5b798a','#7594a2','#7493a1','#82a1ad',
+    '#9abac2','#a7c8ce','#e8dc96','#e7d086','#e6c474','#e6b865','#e5a044',
+    '#e49433','#e28723','#e27b12','#e16f02','#db4010','#d33b17','#c12e25',
+    '#a51b3a','#9c1441','#8b0950','#720889','#7e1894','#9437a8','#a148b3',
+    '#ab59bd','#b768c7','#c278d1','#ce89dc','#da99e7','#e8bdc2'
+]
+
+cape_cmap = LinearSegmentedColormap.from_list("cape_cmap", cape_colors, N=256)

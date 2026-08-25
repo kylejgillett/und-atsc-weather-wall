@@ -1,0 +1,17 @@
+Cartopy
+fsspec
+GeoPandas
+matplotlib
+MetPy
+netCDF4
+numpy
+pandas
+Pillow
+python-awips
+requests
+s3fs
+scipy
+Shapely
+Siphon
+SounderPy
+xarray
