@@ -68,37 +68,37 @@ except:
 
 
 
-def build_map(extent=[-122, -73, 21, 56], projection=ccrs.LambertConformal()):
+# def build_map(extent=[-122, -73, 21, 56], projection=ccrs.LambertConformal()):
 
-    fig = plt.figure(figsize=(20, 10), dpi=250)
-    fig.set_facecolor('#009946')
-    ax = plt.axes(projection=projection)
-    ax.set_extent(extent)
-    ax.set_box_aspect(0.6)
+#     fig = plt.figure(figsize=(20, 10), dpi=250)
+#     fig.set_facecolor('#009946')
+#     ax = plt.axes(projection=projection)
+#     ax.set_extent(extent)
+#     ax.set_box_aspect(0.6)
 
-    ax.add_feature(cfeature.STATES, edgecolor='white', alpha=0.2, linestyle='-', linewidth=2.5, zorder=10)
-    ax.add_feature(cfeature.LAND, facecolor="#1a2637", alpha=0.3, zorder=0.1)
-    ax.add_feature(USCOUNTIES.with_scale('5m'), alpha=0.7, edgecolor='white', linestyle=':', lw=1, zorder=9)
-    nd_roads = ShapelyFeature(Reader('./utils/tl_2024_38_prisecroads/tl_2024_38_prisecroads.shp').geometries(),
-                               ccrs.PlateCarree(), edgecolor='navy', lw=0.8, alpha=0.4, facecolor='none', zorder=11.5)
-    ax.add_feature(nd_roads)
+#     ax.add_feature(cfeature.STATES, edgecolor='white', alpha=0.2, linestyle='-', linewidth=2.5, zorder=10)
+#     ax.add_feature(cfeature.LAND, facecolor="#1a2637", alpha=0.3, zorder=0.1)
+#     ax.add_feature(USCOUNTIES.with_scale('5m'), alpha=0.7, edgecolor='white', linestyle=':', lw=1, zorder=9)
+#     nd_roads = ShapelyFeature(Reader('./utils/tl_2024_38_prisecroads/tl_2024_38_prisecroads.shp').geometries(),
+#                                ccrs.PlateCarree(), edgecolor='navy', lw=0.8, alpha=0.4, facecolor='none', zorder=11.5)
+#     ax.add_feature(nd_roads)
 
-    mn_roads = ShapelyFeature(Reader('./utils/tl_2024_27_prisecroads/tl_2024_27_prisecroads.shp').geometries(),
-                               ccrs.PlateCarree(), edgecolor='navy', lw=0.8, alpha=0.4, facecolor='none', zorder=11.5)
-    ax.add_feature(mn_roads)
+#     mn_roads = ShapelyFeature(Reader('./utils/tl_2024_27_prisecroads/tl_2024_27_prisecroads.shp').geometries(),
+#                                ccrs.PlateCarree(), edgecolor='navy', lw=0.8, alpha=0.4, facecolor='none', zorder=11.5)
+#     ax.add_feature(mn_roads)
     
-    satellite = img_tiles.GoogleTiles(style='satellite')
-    ax.add_image(satellite, 10) 
+#     satellite = img_tiles.GoogleTiles(style='satellite')
+#     ax.add_image(satellite, 10) 
 
-    # rails = ShapelyFeature(Reader('../map-elements/tl_2024_us_rails/tl_2024_us_rails.shp').geometries(),
-    #                            ccrs.PlateCarree(), edgecolor='yellow', ls=':', lw=0.5, alpha=0.6, facecolor='none', zorder=11)
-    # ax.add_feature(rails)
+#     # rails = ShapelyFeature(Reader('../map-elements/tl_2024_us_rails/tl_2024_us_rails.shp').geometries(),
+#     #                            ccrs.PlateCarree(), edgecolor='yellow', ls=':', lw=0.5, alpha=0.6, facecolor='none', zorder=11)
+#     # ax.add_feature(rails)
 
-    # apply tight layout to the figure (keeps things tiddy)
-    plt.tight_layout()
+#     # apply tight layout to the figure (keeps things tiddy)
+#     plt.tight_layout()
 
-    # return the figure axis
-    return fig, ax
+#     # return the figure axis
+#     return fig, ax
 
 
 #################################
@@ -109,9 +109,14 @@ center_lon = -97.5
 # center_lat = 48.175946 
 # center_lon = -106.639628
 box_size = 1.8
-fig, ax = build_map(extent=[center_lon-box_size, center_lon+box_size, center_lat-box_size, center_lat+box_size],
-                    projection=ccrs.Mercator())
+# fig, ax = build_map(extent=[center_lon-box_size, center_lon+box_size, center_lat-box_size, center_lat+box_size],
+#                     projection=ccrs.Mercator())
 
+from utils.map import build_map
+
+fig, ax = build_map(
+    extent=[center_lon-box_size, center_lon+box_size, center_lat-box_size, center_lat+box_size],
+    style="satellite")
 
 try:
     ###################################################################

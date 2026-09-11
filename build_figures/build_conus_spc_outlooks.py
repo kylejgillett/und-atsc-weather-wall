@@ -118,57 +118,22 @@ for outlook, outlook_day in zip(outlooks, range(1,4)):
 
 
 
-    def build_map(extent=[-120, -73, 21, 53], projection=ccrs.LambertConformal(), style='light'):
-
-        fig = plt.figure(figsize=(20, 10), dpi=250)
-        fig.set_facecolor('#009946')
-        ax = plt.axes(projection=projection)
-
-        # apply the map extent (lat/lon bounding box)
-        ax.set_extent(extent)
-        # axis aspect ratio
-        ax.set_box_aspect(0.6)
-        # add map features
-        
-        if style == 'light':
-            color = 'gray'
-            alpha = 0.7
-        else: 
-            color = 'black'
-            alpha = 0.8
-        ax.add_feature(cfeature.STATES, edgecolor='black', alpha=0.5, linestyle='-', linewidth=1, zorder=10)
-        ax.add_feature(cfeature.LAND, facecolor=color, alpha=alpha, zorder=1)
-        ax.add_feature(cfeature.OCEAN, facecolor=color, alpha=alpha+0.2, zorder=0)
-        #ax.add_feature(cfeature.BORDERS, color='white', alpha=1, linestyle='-', linewidth=1, zorder=11)
-        ax.add_feature(cfeature.COASTLINE, color='black', alpha=0.5, linestyle='-', linewidth=1, zorder=11)
-        from cartopy.io import img_tiles
-        satellite = img_tiles.GoogleTiles(style='satellite')
-        ax.add_image(satellite, 4)
-
-        # apply tight layout to the figure (keeps things tiddy)
-        plt.tight_layout()
-
-        # return the figure axis
-        return fig, ax
-
-
-
-    fig, ax = build_map(style='light')
-    ax.add_feature(USCOUNTIES.with_scale('20m'), alpha=0.1, edgecolor='black', linestyle='-', lw=0.5, zorder=12.1)
+    from utils.map import build_map
+    fig, ax = build_map(extent=[-122, -73, 21, 56],style="hazards", terrain=True,)
 
     # this plots the outlook polygons, if they exist
     try:
-        TSTM = ax.add_geometries(outlook.geometry[0], facecolor=outlook.fill[0], edgecolor='black', linewidth=1, alpha=0.6,
+        TSTM = ax.add_geometries(outlook.geometry[0], facecolor=outlook.fill[0], edgecolor='black', linewidth=1, alpha=0.3,
                                  zorder=6, crs=ccrs.PlateCarree(), label="THUNDERSTORM")
-        MRGL = ax.add_geometries(outlook.geometry[1], facecolor=outlook.fill[1], edgecolor='black', linewidth=1, alpha=0.7,
+        MRGL = ax.add_geometries(outlook.geometry[1], facecolor=outlook.fill[1], edgecolor='black', linewidth=1, alpha=0.6,
                                  zorder=6, crs=ccrs.PlateCarree(), label="MARGINAL")
-        SLGT = ax.add_geometries(outlook.geometry[2], facecolor=outlook.fill[2], edgecolor='black', linewidth=1, alpha=0.8,
+        SLGT = ax.add_geometries(outlook.geometry[2], facecolor=outlook.fill[2], edgecolor='black', linewidth=1, alpha=0.7,
                                  zorder=6, crs=ccrs.PlateCarree(), label="SLIGHT")
-        ENH = ax.add_geometries(outlook.geometry[3], facecolor=outlook.fill[3], edgecolor='black', linewidth=1, alpha=0.9,
+        ENH = ax.add_geometries(outlook.geometry[3], facecolor=outlook.fill[3], edgecolor='black', linewidth=1, alpha=0.75,
                                 zorder=6, crs=ccrs.PlateCarree(), label="ENHANCED")
-        MDT = ax.add_geometries(outlook.geometry[4], facecolor=outlook.fill[4], edgecolor='black', linewidth=1, alpha=0.9,
+        MDT = ax.add_geometries(outlook.geometry[4], facecolor=outlook.fill[4], edgecolor='black', linewidth=1, alpha=0.75,
                                 zorder=6, crs=ccrs.PlateCarree(), label="MODERATE")
-        HIGH = ax.add_geometries(outlook.geometry[5], facecolor=outlook.fill[5], edgecolor='black', linewidth=1, alpha=0.9,
+        HIGH = ax.add_geometries(outlook.geometry[5], facecolor=outlook.fill[5], edgecolor='black', linewidth=1, alpha=0.75,
                                  zorder=6, crs=ccrs.PlateCarree(), label="HIGH")
     except:
         pass
