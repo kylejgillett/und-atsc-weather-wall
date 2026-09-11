@@ -38,12 +38,13 @@ if project_root not in sys.path:
 
 # import modules from sub dirs
 from utils.colormaps import *
+from utils.utils import *
 from get_data.get_metars import get_metar_data
 from get_data.get_rap_data import analysis
 from get_data.get_goes_from_aws import download_goes_file
 from get_data.get_radar_mosaic import get_latest_mosaic
 from get_data.get_wpc_bulletin import plot_bulletin
-
+from utils.add_nws_headlines import add_nws_headlines
 
 
 
@@ -264,8 +265,10 @@ pm = ax.pcolormesh(radar_lon+0.05, radar_lat+0.05, radar_data,
 ###################################################################
 texts, params, geoms, valid_time = plot_bulletin(ax)
 
-
-
+###################################################################
+# ADD NWS HEADLINES
+###################################################################
+#add_nws_headlines(ax, wwa_alpha=0.1, sbw_alpha=0.10, linewidth=0.5, zorder=16, legend=True)
 
 ###################################################################
 # SATELLITE DATA
@@ -311,7 +314,8 @@ imgax.imshow(img)
 imgax.axis('off')
 
 
-plt.savefig("staged_figures/regional_surface_analysis/regional_rap_analysis.png", bbox_inches="tight")
+composite_filename = build_filename("staged_figures/regional_surface_analysis/", f"regional_rap_analysis", data_date.astype('datetime64[us]').item())
+plt.savefig(composite_filename, bbox_inches="tight")
 
 
 elapsed_time = comp_time.time() - st

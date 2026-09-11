@@ -34,7 +34,7 @@ project_root = os.path.abspath(os.path.join(script_dir, ".."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-
+from utils.utils import *
 
 
 # Current date (or target date)
@@ -206,7 +206,9 @@ for outlook, outlook_day in zip(outlooks, range(1,4)):
     imgax.axis('off')
 
 
-    plt.savefig(f"staged_figures/conus_spc_outlooks/spc-d{outlook_day}outlook.png", bbox_inches="tight")
+    outlook_filename = build_filename("staged_figures/conus_spc_outlooks/", f"outlook", issue_date, variant=f"d{outlook_day}")
+
+    plt.savefig(outlook_filename, bbox_inches="tight")
 
 
 elapsed_time = comp_time.time() - st

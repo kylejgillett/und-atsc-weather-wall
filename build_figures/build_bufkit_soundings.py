@@ -24,6 +24,7 @@ project_root = os.path.abspath(os.path.join(script_dir, ".."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
+from utils.utils import *
 
 
 #################################
@@ -31,8 +32,13 @@ if project_root not in sys.path:
 #################################
 gfk_data = spy.get_bufkit_data('hrrr', "kgfk", 1)
 
+snd_date = gfk_data['site_info']['valid-time']
+snd_dt = datetime(int(snd_date[0]), int(snd_date[1]), int(snd_date[2]), int(snd_date[3]), tzinfo=timezone.utc)
+
+analysis_filename = build_filename("staged_figures/soundings/", f"sounding", snd_dt, variant="anl-kgfk")
+
 spy.build_sounding(gfk_data, special_parcels='simple', map_zoom=1, color_blind=True, radar='mosaic',
-                   save=True, filename="staged_figures/soundings/gfk_rap_sounding.png")
+                   save=True, filename=analysis_filename)
 print("    FINISHED GFK BUFKIT SOUNDING")
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -62,8 +68,13 @@ for hrs in offsets:
 
 datas.append(gfk_data)
 
+snd_date = datas[-1]['site_info']['valid-time']
+snd_dt = datetime(int(snd_date[0]), int(snd_date[1]), int(snd_date[2]), int(snd_date[3]), tzinfo=timezone.utc)
+
+composite_filename = build_filename("staged_figures/soundings/", f"sounding", snd_dt, variant='cmp-kgfk')
+
 spy.build_composite(datas, cmap='copper_r', lw_to_use=[4 for data in datas], alphas_to_use=[1, 0.9, 0.8, 0.7, 0.6][::-1],
-                   save=True, filename="staged_figures/soundings/gfk_rap_composite_sounding.png")
+                   save=True, filename=composite_filename)
 
 
 print("    FINISHED GFK EVOLUTION COMPOSITE SOUNDING")

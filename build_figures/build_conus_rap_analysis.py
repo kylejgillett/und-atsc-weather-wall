@@ -35,6 +35,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 # import modules from sub dirs
+from utils.utils import *
 from utils.colormaps import *
 from get_data.get_metars import get_metar_data
 from get_data.get_rap_data import analysis
@@ -364,7 +365,9 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/conus_rap_analysis/rap_300_flow.png", bbox_inches="tight")
+
+composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='300a')
+plt.savefig(composite_filename, bbox_inches="tight")
 
 print("    FINISHED 300HPA FLOW MAP")
 #############################################################################################################################################################################
@@ -436,7 +439,8 @@ print("    FINISHED 300HPA FLOW MAP")
 # imgax.imshow(img)
 # imgax.axis('off')
 
-# plt.savefig("staged_figures/conus_rap_analysis/rap_300_pva.png", bbox_inches="tight")
+#composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='300b')
+#plt.savefig(composite_filename, bbox_inches="tight")
 
 # print("    FINISHED 300HPA PVA MAP")
 # #############################################################################################################################################################################
@@ -507,7 +511,8 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/conus_rap_analysis/rap_500_flow.png", bbox_inches="tight")
+composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='500a')
+plt.savefig(composite_filename, bbox_inches="tight")
 
 print("    FINISHED 500HPA FLOW MAP")
 #############################################################################################################################################################################
@@ -581,7 +586,8 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/conus_rap_analysis/rap_500_relvort.png", bbox_inches="tight")
+composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='500b')
+plt.savefig(composite_filename, bbox_inches="tight")
 
 print("    FINISHED 500HPA REL VORT MAP")
 #############################################################################################################################################################################
@@ -646,7 +652,8 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/conus_rap_analysis/rap_500_relvortadv.png", bbox_inches="tight")
+composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='500c')
+plt.savefig(composite_filename, bbox_inches="tight")
 
 print("    FINISHED 500HPA REL VORT ADV MAP")
 #############################################################################################################################################################################
@@ -724,12 +731,161 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/conus_rap_analysis/rap_700_temp.png", bbox_inches="tight")
+composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='700a')
+plt.savefig(composite_filename, bbox_inches="tight")
 
 print("    FINISHED 700HPA TEMP MAP")
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
+
+
+
+
+
+
+
+
+
+
+
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# BUILD 850HPA FLOW MAP
+#################################
+fig, ax = build_map(add_sat=True)
+
+# slice data
+plev850 = np.where(pres_levs == 850)[0][0]
+ghgt_850 = ghgt_iso[plev850]
+uwnd_850 = uwnd_iso[plev850]
+vwnd_850 = vwnd_iso[plev850]
+temp_850 = temp_iso[plev850]
+wdsp_850 = np.sqrt(uwnd_850**2 + vwnd_850**2)
+
+# plot 850 hpa heights
+contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
+                colors='black', linewidths=3.0, linestyles='-',
+                transform=ccrs.PlateCarree(), zorder=11)
+plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+           rightside_up=True, use_clabeltext=True)
+
+# plot 850 wind speed fill
+contourf = ax.contourf(lons, lats, wdsp_850, np.arange(20, 85, 5), extend='max',
+                            cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
+
+
+# plot 850hpa wind barbs
+every = 15
+barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+                uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
+                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
+
+# plot title, add one to the left with model name and data names, add another to the right with time info
+plt.figtext(0.08, 1.03, f'     RAP 850 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
+plt.figtext(0.08, 1.00, f'     Heights (m), Wind (kts)', ha='left', fontsize=18, color='white')
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(25, 100, 5), extendrect=True)
+cax.text(3, 0.5, 'Wind Speed (kts)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar.ax.tick_params(axis='y', labelcolor='white') 
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+    t.set_fontsize(9)
+cbar.ax.set_facecolor('black')
+
+# add UND logo
+from PIL import Image
+img = Image.open('utils/images/und-logo.png')
+#                  side-side  up-down  size   size
+imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
+plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+imgax.imshow(img)
+imgax.axis('off')
+
+composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='850a')
+plt.savefig(composite_filename, bbox_inches="tight")
+
+print("    FINISHED 850HPA FLOW MAP")
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+############################################################################################################################################################################.
+
+
+
+
+
+
+
+
+
+
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# BUILD 850HPA TEMP MAP
+#################################
+fig, ax = build_map()
+
+# use 850 slices from above
+
+
+# plot 850 hpa heights
+contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
+                colors='black', linewidths=3.0, linestyles='-',
+                transform=ccrs.PlateCarree(), zorder=11)
+plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
+           rightside_up=True, use_clabeltext=True)
+
+# plot 0C isotherm
+ax.contour(lons, lats, temp_850, levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
+
+# plot 850hpa temperature fill
+contourf = ax.contourf(lons, lats, temp_850, np.arange(-40, 42, 1), extent='both',
+                 cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
+
+# plot 850hpa wind barbs
+every = 15
+barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+                uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
+                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
+
+# plot title, add one to the left with model name and data names, add another to the right with time info
+plt.figtext(0.08, 1.03, f'     RAP 850 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
+plt.figtext(0.08, 1.00, f'     Heights (m), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-40, 42, 5), extendrect=True)
+cax.text(3, 0.5, 'Temperature (C)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar.ax.tick_params(axis='y', labelcolor='white') 
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+    t.set_fontsize(9)
+cbar.ax.set_facecolor('black')
+
+# add UND logo
+from PIL import Image
+img = Image.open('utils/images/und-logo.png')
+#                  side-side  up-down  size   size
+imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
+plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
+imgax.imshow(img)
+imgax.axis('off')
+
+composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='850b')
+plt.savefig(composite_filename, bbox_inches="tight")
+
+print("    FINISHED 850HPA TEMP MAP")
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+
+
 
 
 
@@ -807,7 +963,8 @@ try:
     imgax.imshow(img)
     imgax.axis('off')
 
-    plt.savefig("staged_figures/conus_rap_analysis/rap_850_tempadv.png", bbox_inches="tight")
+    composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='850c')
+    plt.savefig(composite_filename, bbox_inches="tight")
 
     print("    FINISHED 850HPA TEMP ADV MAP")
 
@@ -818,140 +975,6 @@ except TypeError as e:
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 
-
-
-
-
-
-
-#############################################################################################################################################################################
-#############################################################################################################################################################################
-#############################################################################################################################################################################
-#################################
-# BUILD 850HPA FLOW MAP
-#################################
-fig, ax = build_map(add_sat=True)
-
-# use 850 slices from above
-
-
-# plot 850 hpa heights
-contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
-                colors='black', linewidths=3.0, linestyles='-',
-                transform=ccrs.PlateCarree(), zorder=11)
-plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
-           rightside_up=True, use_clabeltext=True)
-
-# plot 850 wind speed fill
-contourf = ax.contourf(lons, lats, wdsp_850, np.arange(20, 85, 5), extend='max',
-                            cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
-
-
-# plot 850hpa wind barbs
-every = 15
-barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
-                uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
-                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
-
-# plot title, add one to the left with model name and data names, add another to the right with time info
-plt.figtext(0.08, 1.03, f'     RAP 850 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-plt.figtext(0.08, 1.00, f'     Heights (m), Wind (kts)', ha='left', fontsize=18, color='white')
-plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(25, 100, 5), extendrect=True)
-cax.text(3, 0.5, 'Wind Speed (kts)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-cbar.ax.tick_params(axis='y', labelcolor='white') 
-for t in cbar.ax.get_yticklabels():
-    t.set_fontweight('bold')
-    t.set_fontsize(9)
-cbar.ax.set_facecolor('black')
-
-# add UND logo
-from PIL import Image
-img = Image.open('utils/images/und-logo.png')
-#                  side-side  up-down  size   size
-imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-imgax.imshow(img)
-imgax.axis('off')
-
-plt.savefig("staged_figures/conus_rap_analysis/rap_850_flow.png", bbox_inches="tight")
-
-print("    FINISHED 850HPA FLOW MAP")
-#############################################################################################################################################################################
-#############################################################################################################################################################################
-############################################################################################################################################################################.
-
-
-
-
-
-
-
-
-
-
-#############################################################################################################################################################################
-#############################################################################################################################################################################
-#############################################################################################################################################################################
-#################################
-# BUILD 850HPA TEMP MAP
-#################################
-fig, ax = build_map()
-
-# use 850 slices from above
-
-
-# plot 850 hpa heights
-contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
-                colors='black', linewidths=3.0, linestyles='-',
-                transform=ccrs.PlateCarree(), zorder=11)
-plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
-           rightside_up=True, use_clabeltext=True)
-
-# plot 0C isotherm
-ax.contour(lons, lats, temp_850, levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
-
-# plot 850hpa temperature fill
-contourf = ax.contourf(lons, lats, temp_850, np.arange(-40, 42, 1), extent='both',
-                 cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
-
-# plot 850hpa wind barbs
-every = 15
-barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
-                uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
-                length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
-
-# plot title, add one to the left with model name and data names, add another to the right with time info
-plt.figtext(0.08, 1.03, f'     RAP 850 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-plt.figtext(0.08, 1.00, f'     Heights (m), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
-plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-40, 42, 5), extendrect=True)
-cax.text(3, 0.5, 'Temperature (C)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-cbar.ax.tick_params(axis='y', labelcolor='white') 
-for t in cbar.ax.get_yticklabels():
-    t.set_fontweight('bold')
-    t.set_fontsize(9)
-cbar.ax.set_facecolor('black')
-
-# add UND logo
-from PIL import Image
-img = Image.open('utils/images/und-logo.png')
-#                  side-side  up-down  size   size
-imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-imgax.imshow(img)
-imgax.axis('off')
-
-plt.savefig("staged_figures/conus_rap_analysis/rap_850_temp.png", bbox_inches="tight")
-
-print("    FINISHED 850HPA TEMP MAP")
-#############################################################################################################################################################################
-#############################################################################################################################################################################
-#############################################################################################################################################################################
 
 
 
@@ -1011,7 +1034,8 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/conus_rap_analysis/rap_sfc_temp.png", bbox_inches="tight")
+composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='000a')
+plt.savefig(composite_filename, bbox_inches="tight")
 
 print("    FINISHED SFC TEMP MAP")
 #############################################################################################################################################################################
@@ -1077,7 +1101,8 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/conus_rap_analysis/rap_sfc_dwpt.png", bbox_inches="tight")
+composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='000b')
+plt.savefig(composite_filename, bbox_inches="tight")
 
 print("    FINISHED SFC DWPT MAP")
 #############################################################################################################################################################################
@@ -1166,7 +1191,8 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/conus_rap_analysis/rap_sfc_cape.png", bbox_inches="tight")
+composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='000c')
+plt.savefig(composite_filename, bbox_inches="tight")
 
 print("    FINISHED SFC CAPE MAP")
 #############################################################################################################################################################################
@@ -1260,7 +1286,8 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/conus_rap_analysis/rap_sfc_analysis.png", bbox_inches="tight")
+composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='000d')
+plt.savefig(composite_filename, bbox_inches="tight")
 
 print("    FINISHED SFC ANL MAP")
 #############################################################################################################################################################################

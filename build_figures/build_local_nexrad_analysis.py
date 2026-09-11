@@ -50,9 +50,13 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 # import modules from sub dirs
+from utils.utils import *
 from utils.colormaps import *
 from get_data.get_metars import get_metar_data
 from get_data.get_nexrad_from_aws import get_radar
+from utils.add_nws_headlines import add_nws_headlines
+
+#dt_past = datetime(2026, 9, 3, 18, 20)
 
 try:
     # get nexrad data
@@ -66,11 +70,11 @@ except:
 
 def build_map(extent=[-122, -73, 21, 56], projection=ccrs.LambertConformal()):
 
-    fig = plt.figure(figsize=(20, 12), dpi=250)
+    fig = plt.figure(figsize=(20, 10), dpi=250)
     fig.set_facecolor('#009946')
     ax = plt.axes(projection=projection)
     ax.set_extent(extent)
-    ax.set_box_aspect(0.7)
+    ax.set_box_aspect(0.6)
 
     ax.add_feature(cfeature.STATES, edgecolor='white', alpha=0.2, linestyle='-', linewidth=2.5, zorder=10)
     ax.add_feature(cfeature.LAND, facecolor="#1a2637", alpha=0.3, zorder=0.1)
@@ -163,7 +167,12 @@ rad_display = display.plot_ppi_map(field= 'reflectivity',
                  #gatefilter=gatefilter
                  zorder=5,
                  alpha=0.9)
-    
+
+###################################################################
+# ADD NWS HEADLINES
+###################################################################
+#add_nws_headlines(ax, zorder=4, legend=True)
+
     
 #################################
 # ADD MAP EXTRAS
@@ -179,8 +188,22 @@ plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
 norm = colors.Normalize(vmin=-32, vmax=95)
 sm = cm.ScalarMappable(cmap=rs_expertreflect_cmap, norm=norm)
 sm.set_array([])
-cbar = plt.colorbar(sm, ax=ax,  aspect=70, fraction=0.02, orientation='horizontal', pad=-0.01, extendrect=True)
-cbar.set_label("Equivalent Reflectivity Factor (dBZ)", fontsize=15, color='white') 
+# cbar = plt.colorbar(sm, ax=ax,  aspect=70, fraction=0.02, orientation='horizontal', pad=-0.01, extendrect=True)
+# cbar.set_label("Equivalent Reflectivity Factor (dBZ)", fontsize=15, color='white') 
+
+
+plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
+cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
+cbar = fig.colorbar(sm, cax=cax, orientation='vertical', ticks=np.arange(-30, 100, 5), extendrect=True)
+cax.text(3, 0.5, "Equivalent Reflectivity Factor (dBZ)", 
+         ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
+cbar.ax.tick_params(axis='y', labelcolor='white') 
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+    t.set_fontsize(9)
+cbar.ax.set_facecolor('black')
+
 
 # add UND logo
 from PIL import Image
@@ -191,7 +214,11 @@ plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', font
 imgax.imshow(img)
 imgax.axis('off')
 
-plt.savefig("staged_figures/local_nexrad_analysis/local_nexrad_analysis.png", bbox_inches="tight")
+now_utc = datetime.now(timezone.utc)
+nexrad_filename = build_filename("staged_figures/local_nexrad_analysis/", f"local_nexrad_analysis", now_utc)
+
+
+plt.savefig(nexrad_filename, bbox_inches="tight")
 
 elapsed_time = comp_time.time() - st
 print(f"############\nSCRIPT FINISHED: time: {comp_time.strftime("%H:%M:%S", comp_time.gmtime(elapsed_time))}\n############")

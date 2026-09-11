@@ -44,9 +44,6 @@ stations = {
             }
 
 
-
-
-
 # get station data and build the plot
 for station_id in stations:
 
@@ -56,6 +53,9 @@ for station_id in stations:
 
     # get data
     df = get_asos_obs(station_id, hours=hours)
+
+    print(df['valid'].iloc[-1])
+
 
     # define a text outline stroke and a skip
     TEXT_OUTLINE = [withStroke(linewidth=3, foreground=(0, 0, 0, 0.3))]
@@ -277,7 +277,10 @@ for station_id in stations:
     imgax.axis('off')
 
 
-    plt.savefig(f"staged_figures/asos_timeseries/{station_id}_timeseries.png", bbox_inches="tight")
+    now_utc = datetime.now(timezone.utc)
+    filename = build_filename("staged_figures/asos_timeseries/", f"asos_timeseries", now_utc, variant=station_id)
+
+    plt.savefig(filename, bbox_inches="tight")
 
     print(f"    FINISHED {station_id} timeseries")
 #############################################################################################################################################################################

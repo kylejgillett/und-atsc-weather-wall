@@ -5,6 +5,22 @@
 
 # imports
 import math
+import numpy as np
+from datetime import timezone, datetime
+
+
+# stanardized filename handler
+def build_filename(storage, figtype, validtime, variant=None, order=None):
+
+    time_str = validtime.astimezone(timezone.utc).strftime("%Y%m%d_%H%M%S")
+
+    if variant is not None:
+        filename = f"{storage}{figtype}_{time_str}_{variant}.png"
+    else: 
+        filename = f"{storage}{figtype}_{time_str}.png"
+
+    return filename
+
 
 
 
@@ -17,6 +33,7 @@ def wind_to_dir(u, v):
             "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
 
     # Each sector covers 360/16 = 22.5 degrees
+    wind_dir_deg = (np.degrees(np.arctan2(-u, -v)) + 360) % 360
     idx = int((wind_dir_deg + 11.25) // 22.5) % 16
 
     return dirs[idx]

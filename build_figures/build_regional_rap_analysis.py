@@ -35,6 +35,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 # import modules from sub dirs
+from utils.utils import *
 from utils.colormaps import *
 from get_data.get_metars import get_metar_data
 from get_data.get_rap_data import analysis

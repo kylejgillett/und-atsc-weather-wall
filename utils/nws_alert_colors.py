@@ -33,3 +33,12 @@ NWS_ALERT_COLORS = {
 }
 
 NWS_ALERT_DEFAULT_COLOR = '#999999'
+
+
+SBW_COLORS = {
+    "Tornado Warning": "#FF0000",               # red
+    "Severe Thunderstorm Warning": "#FFFF00",   # yellow
+    "Flash Flood Warning": "#00FF00",           # green
+    "Special Marine Warning": "#00FFFF",        # cyan
+    "Snow Squall Warning": "#8A2BE2",           # purple
+}

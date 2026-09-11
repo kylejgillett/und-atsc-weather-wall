@@ -23,6 +23,42 @@ import io
 import sys
 import os
 
+
+def add_wwa_colors(gdf):
+    """Colors for broad NWS watches/warnings/advisories."""
+
+    if gdf.empty:
+        return gdf
+
+    gdf = gdf.copy()
+
+    gdf["_plot_color"] = (
+        gdf["event"]
+        .map(NWS_ALERT_COLORS)
+        .fillna(NWS_ALERT_DEFAULT_COLOR)
+    )
+
+    return gdf
+
+
+def add_sbw_colors(gdf):
+    """Radar-style colors for storm-based warnings."""
+
+    if gdf.empty:
+        return gdf
+
+    gdf = gdf.copy()
+
+    gdf["_plot_color"] = (
+        gdf["event"]
+        .map(SBW_COLORS)
+        .fillna(NWS_ALERT_DEFAULT_COLOR)
+    )
+
+    return gdf
+
+
+
 # get script dir
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -32,17 +68,23 @@ project_root = os.path.abspath(os.path.join(script_dir, ".."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from get_data.get_nws_headlines import get_sbw, get_wwa
-from utils.nws_alert_colors import NWS_ALERT_COLORS, NWS_ALERT_DEFAULT_COLOR
+from utils.nws_alert_colors import NWS_ALERT_COLORS, NWS_ALERT_DEFAULT_COLOR, SBW_COLORS
 
-sbw = get_sbw()
-wwa = get_wwa()
+
+
+from get_data.get_nws_headlines import get_nws_headlines
+sbw, wwa = get_nws_headlines()
+
+wwa = add_wwa_colors(wwa)
+sbw = add_sbw_colors(sbw)
+
+
 
 print(f"    FOUND {len(sbw)}, ACTIVE STORM BASED WARNINGS")
 print(f"    FOUND {len(wwa)}, ACTIVE WATCHES/WARNINGS/ADVISORIES")
 
 
-def build_map(extent=[-120, -73, 21, 53], projection=ccrs.LambertConformal(), style='light'):
+def build_map(extent=[-116, -76, 22, 56], projection=ccrs.LambertConformal(), style='black'):
 
     fig = plt.figure(figsize=(20, 10), dpi=250)
     fig.set_facecolor('#009946')
@@ -77,39 +119,44 @@ def build_map(extent=[-120, -73, 21, 53], projection=ccrs.LambertConformal(), st
 
 
 
-fig, ax = build_map(style='light')
+fig, ax = build_map(style='dark')
 ax.add_feature(USCOUNTIES.with_scale('20m'), alpha=0.1, edgecolor='black', linestyle='-', lw=0.5, zorder=12.1)
 
 
-def plot_by_event(gdf, ax, label_key='event', zorder=12.2, alpha=1):
+def prepare_alerts(gdf):
+
     if gdf.empty:
-        return []
+        return gdf
 
-    patches = []
-    gdf = gdf.to_crs('EPSG:4326')
+    gdf = gdf.copy()
 
-    for event_name, group in gdf.groupby(label_key):
-        color = NWS_ALERT_COLORS.get(event_name, NWS_ALERT_DEFAULT_COLOR)
-        group.plot(
-            ax=ax,
-            facecolor=color,
-            edgecolor='black',
-            linewidth=0.45,
-            alpha=alpha,
-            transform=ccrs.PlateCarree(),
-            zorder=zorder,
-        )
-        patches.append(mpatches.Patch(facecolor=color, edgecolor='black', label=event_name, alpha=0.5))
-    return patches
+    gdf["_plot_color"] = (
+        gdf["event"]
+        .map(NWS_ALERT_COLORS)
+        .fillna(NWS_ALERT_DEFAULT_COLOR)
+    )
 
-patches = []
-patches.extend(plot_by_event(wwa, ax, label_key='event', zorder=12.3, alpha=0.45))
-patches.extend(plot_by_event(sbw, ax, label_key='event', zorder=12.4, alpha=0.60))
+    return gdf
 
-if patches:
-    # Keep legend to just unique events
-    unique = {p.get_label(): p for p in patches}
-    ax.legend(handles=list(unique.values()), title='NWS Alerts', loc='lower left', fontsize=9, title_fontsize=10, framealpha=0.85)
+wwa.plot(
+    ax=ax,
+    color=wwa["_plot_color"],
+    edgecolor="black",
+    linewidth=0.4,
+    alpha=0.45,
+    transform=ccrs.PlateCarree(),
+    zorder=12.3,
+)
+
+sbw.plot(
+    ax=ax,
+    color=sbw["_plot_color"],
+    edgecolor="black",
+    linewidth=0.45,
+    alpha=0.65,
+    transform=ccrs.PlateCarree(),
+    zorder=12.4,
+)
 
 #################################
 # ADD MAP EXTRAS
