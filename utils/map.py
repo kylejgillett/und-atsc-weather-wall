@@ -1,493 +1,163 @@
-"""
-Consistent Cartopy basemaps for the UND ATSC Weather Wall.
 
-Recommended use:
-    fig, ax = build_map(extent=extent, style="weather")
-    fig, ax = build_map(extent=extent, style="hazards")
-    fig, ax = build_map(extent=extent, style="satellite")
+##########################################################
+#               BASIC MAP GENERATION SCRIPT
+#  (c) KYLE J GILLETT, UNIVERSITY OF NORTH DAKOTA, 2026
+##########################################################
 
-Always specify transform=ccrs.PlateCarree() when plotting lat/lon weather data.
-"""
-
-from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal, Sequence
-
+import sys
+import os
+import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
-import matplotlib.pyplot as plt
 from cartopy.feature import ShapelyFeature
 from cartopy.io import img_tiles
 from cartopy.io.shapereader import Reader
 from metpy.plots import USCOUNTIES
 
 
-DATA_CRS = ccrs.PlateCarree()
-CONUS_EXTENT = (-122.0, -73.0, 21.0, 56.0)
+# get script dir
+script_dir = os.path.dirname(os.path.abspath(__file__))
+# get the parent dir 
+project_root = os.path.abspath(os.path.join(script_dir, ".."))
+if project_root not in sys.path:
+    sys.path.append(project_root)
+from utils.utils import *
+from utils.style import *
 
-StyleName = Literal["weather", "hazards", "dark", "satellite"]
-DetailName = Literal["auto", "conus", "regional", "local"]
 
+# prep cached and saved gis data
 UTILS_DIR = Path(__file__).resolve().parent
-TILE_CACHE_DIR = UTILS_DIR / ".cartopy_tile_cache"
-TERRAIN_CACHE_DIR = UTILS_DIR / ".cartopy_terrain_cache"
-
-ROAD_FILES = {
-    "us_primary": UTILS_DIR / "tl_2024_us_primaryroads" / "tl_2024_us_primaryroads.shp",
-    "nd": UTILS_DIR / "tl_2024_38_prisecroads" / "tl_2024_38_prisecroads.shp",
-    "mn": UTILS_DIR / "tl_2024_27_prisecroads" / "tl_2024_27_prisecroads.shp",
-}
-
-
-# Quiet basemaps: weather data should be the loudest thing on the figure.
-MAP_STYLES = {
-    # Signature weather-wall look:
-    # dark charcoal terrain, blue-black water, silver geography.
-    "weather": {
-        "figure": "#091119",
-        "land": "#1A2229",
-        "water": "#071018",
-        "state": "#AAB4BC",
-        "border": "#C6CDD2",
-        "coast": "#C6CDD2",
-        "county": "#66727C",
-        "road": "#58646D",
-        "state_alpha": 0.78,
-        "boundary_alpha": 0.88,
-        "county_alpha": 0.28,
-        "road_alpha": 0.22,
-    },
-
-    # Similar identity, but a touch flatter/quieter for categorical hazards.
-    "hazards": {
-        "figure": "#0B1218",
-        "land": "#1D252B",
-        "water": "#081017",
-        "state": "#9CA6AD",
-        "border": "#BCC4C9",
-        "coast": "#BCC4C9",
-        "county": "#626D75",
-        "road": "#59636B",
-        "state_alpha": 0.70,
-        "boundary_alpha": 0.80,
-        "county_alpha": 0.23,
-        "road_alpha": 0.18,
-    },
-
-    # Higher-contrast version for radar and luminous fields.
-    "dark": {
-        "figure": "#050B10",
-        "land": "#141C22",
-        "water": "#040A0F",
-        "state": "#BBC4CA",
-        "border": "#D9DEE1",
-        "coast": "#D9DEE1",
-        "county": "#69757E",
-        "road": "#606A72",
-        "state_alpha": 0.82,
-        "boundary_alpha": 0.92,
-        "county_alpha": 0.30,
-        "road_alpha": 0.24,
-    },
-
-    # Satellite keeps the imagery itself dominant while matching boundary style.
-    "satellite": {
-        "figure": "#050B10",
-        "land": None,
-        "water": None,
-        "state": "#CBD3D8",
-        "border": "#E4E8EA",
-        "coast": "#E4E8EA",
-        "county": "#8C989F",
-        "road": "#8A949A",
-        "state_alpha": 0.76,
-        "boundary_alpha": 0.88,
-        "county_alpha": 0.30,
-        "road_alpha": 0.24,
-    },
-}
+TERRAIN_CACHE = UTILS_DIR / ".cartopy_terrain_cache"
+SATELLITE_CACHE = UTILS_DIR / ".cartopy_satellite_cache"
+US_PRIMARY_ROADS = (
+    UTILS_DIR
+    / "tl_2024_us_primaryroads"
+    / "tl_2024_us_primaryroads.shp")
+ND_ROADS = (
+    UTILS_DIR
+    / "tl_2024_38_prisecroads"
+    / "tl_2024_38_prisecroads.shp")
+MN_ROADS = (
+    UTILS_DIR
+    / "tl_2024_27_prisecroads"
+    / "tl_2024_27_prisecroads.shp")
 
 
-DETAIL_STYLES = {
-    "conus": {
-        "scale": "50m",
-        "county_scale": "20m",
-        "state_lw": 0.80,
-        "boundary_lw": 0.90,
-        "county_lw": 0.35,
-        "road_lw": 0.40,
-    },
-    "regional": {
-        "scale": "50m",
-        "county_scale": "20m",
-        "state_lw": 0.90,
-        "boundary_lw": 1.00,
-        "county_lw": 0.42,
-        "road_lw": 0.50,
-    },
-    "local": {
-        "scale": "10m",
-        "county_scale": "5m",
-        "state_lw": 1.05,
-        "boundary_lw": 1.10,
-        "county_lw": 0.55,
-        "road_lw": 0.60,
-    },
-}
 
-
-def _validate_extent(extent: Sequence[float]) -> tuple[float, float, float, float]:
-    if len(extent) != 4:
-        raise ValueError("extent must be [west, east, south, north].")
-
-    west, east, south, north = map(float, extent)
-
-    if east <= west or north <= south:
-        raise ValueError("Invalid map extent.")
-
-    return west, east, south, north
-
-
-def _auto_detail(extent) -> Literal["conus", "regional", "local"]:
-    west, east, south, north = extent
-    span = max(east - west, north - south)
-
-    if span > 25:
-        return "conus"
-    if span > 7:
-        return "regional"
-    return "local"
-
-
-def _lambert_for_extent(extent):
-    west, east, south, north = extent
-    center_lon = (west + east) / 2
-    center_lat = (south + north) / 2
-
-    lower = max(20.0, min(35.0, south + 4.0))
-    upper = min(60.0, max(45.0, north - 4.0))
-
-    if upper <= lower:
-        lower, upper = 30.0, 50.0
-
-    return ccrs.LambertConformal(
-        central_longitude=center_lon,
-        central_latitude=center_lat,
-        standard_parallels=(lower, upper),
-    )
-
-
-def _auto_tile_zoom(extent) -> int:
-    west, east, south, north = extent
-    span = max(east - west, north - south)
-
-    if span > 35:
-        return 4
-    if span > 18:
-        return 5
-    if span > 9:
-        return 6
-    if span > 4.5:
-        return 7
-    if span > 2:
-        return 8
-    return 9
-
-
-def _auto_terrain_zoom(extent) -> int:
-    """Use slightly less detail than imagery; enough for visible relief."""
-    return max(4, min(8, _auto_tile_zoom(extent) - 1))
-
-
-def _terrain_tiles():
-    """
-    Label-free shaded-relief tiles.
-
-    Using a custom tile URL avoids roads/place labels in the terrain layer,
-    which keeps the weather-wall map clean.
-    """
-    TERRAIN_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
-    return img_tiles.GoogleTiles(
-        url=(
-            "https://server.arcgisonline.com/ArcGIS/rest/services/"
-            "World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}.jpg"
-        ),
-        cache=TERRAIN_CACHE_DIR,
-    )
+def terrain_tiles():
+    TERRAIN_CACHE.mkdir(parents=True, exist_ok=True)
+    tiles = img_tiles.GoogleTiles(url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}.jpg", cache=TERRAIN_CACHE)
+    return tiles
 
 
 @lru_cache(maxsize=8)
-def _read_geometries(path_string: str):
+def _read_geometries(path_string):
     path = Path(path_string)
     if not path.exists():
         return tuple()
     return tuple(Reader(str(path)).geometries())
 
 
-def _add_line_shapefile(
-    ax,
-    path: Path,
-    *,
-    color: str,
-    linewidth: float,
-    alpha: float,
-    zorder: float,
-):
-    geoms = _read_geometries(str(path))
-    if not geoms:
-        return False
 
-    feature = ShapelyFeature(
-        geoms,
-        DATA_CRS,
-        facecolor="none",
-        edgecolor=color,
-        linewidth=linewidth,
-        alpha=alpha,
-    )
-    ax.add_feature(feature, zorder=zorder)
-    return True
+def _add_roads(ax, road_type="primary", color=ROAD_COLOR, linewidth=0.45, alpha=0.30):
+    if road_type == "primary":
+        road_files = [US_PRIMARY_ROADS]
+
+    elif road_type == "local":
+        road_files = [ND_ROADS, MN_ROADS]
+
+    for road_file in road_files:
+        geometries = _read_geometries(str(road_file))
+        if not geometries:
+            continue
+
+        roads = ShapelyFeature(geometries, DATA_CRS, facecolor="none", edgecolor=color, linewidth=linewidth, alpha=alpha,)
+        ax.add_feature(roads,zorder=9.5)
 
 
-def _add_roads(ax, detail, style_cfg, detail_cfg):
-    if detail == "conus":
-        return
 
-    kwargs = {
-        "color": style_cfg["road"],
-        "linewidth": detail_cfg["road_lw"],
-        "alpha": style_cfg["road_alpha"],
-        "zorder": 9.6,
-    }
-
-    if detail == "regional":
-        _add_line_shapefile(ax, ROAD_FILES["us_primary"], **kwargs)
-        return
-
-    # Current detailed local road files in the repository.
-    added = False
-    for key in ("nd", "mn"):
-        added |= _add_line_shapefile(ax, ROAD_FILES[key], **kwargs)
-
-    if not added:
-        _add_line_shapefile(ax, ROAD_FILES["us_primary"], **kwargs)
+DATA_CRS = ccrs.PlateCarree()
+CONUS_EXTENT = (-122, -73, 21, 56)
 
 
-def _add_flat_background(ax, style_cfg, scale):
-    ax.set_facecolor(style_cfg["figure"])
 
-    for feature, color, zorder in (
-        (cfeature.LAND, style_cfg["land"], 0.0),
-        (cfeature.OCEAN, style_cfg["water"], 0.0),
-        (cfeature.LAKES, style_cfg["water"], 0.1),
-    ):
-        ax.add_feature(
-            feature.with_scale(scale),
-            facecolor=color,
-            edgecolor="none",
-            zorder=zorder,
-        )
-
-
-def _add_boundaries(ax, style_cfg, detail_cfg, counties):
-    scale = detail_cfg["scale"]
-
-    ax.add_feature(
-        cfeature.STATES.with_scale(scale),
-        facecolor="none",
-        edgecolor=style_cfg["state"],
-        linewidth=detail_cfg["state_lw"],
-        alpha=style_cfg["state_alpha"],
-        zorder=10.0,
-    )
-
-    for feature, color, zorder in (
-        (cfeature.BORDERS, style_cfg["border"], 10.1),
-        (cfeature.COASTLINE, style_cfg["coast"], 10.2),
-    ):
-        ax.add_feature(
-            feature.with_scale(scale),
-            facecolor="none",
-            edgecolor=color,
-            linewidth=detail_cfg["boundary_lw"],
-            alpha=style_cfg["boundary_alpha"],
-            zorder=zorder,
-        )
-
-    if counties:
-        ax.add_feature(
-            USCOUNTIES.with_scale(detail_cfg["county_scale"]),
-            facecolor="none",
-            edgecolor=style_cfg["county"],
-            linewidth=detail_cfg["county_lw"],
-            alpha=style_cfg["county_alpha"],
-            zorder=9.0,
-        )
-
-
-def build_map(
-    extent: Sequence[float] = CONUS_EXTENT,
-    *,
-    style: StyleName = "weather",
-    detail: DetailName = "auto",
+def map_builder(
+    extent=CONUS_EXTENT,
     projection=None,
-    counties: bool | None = None,
-    roads: bool | None = None,
-    satellite_zoom: int | None = None,
-    satellite_alpha: float = 0.72,
-    terrain: bool | None = None,
-    terrain_zoom: int | None = None,
-    terrain_alpha: float = 0.42,
-    figsize: tuple[float, float] = (20, 10),
-    dpi: int = 250,
-):
-    """
-    Create a consistent weather-wall map.
+    figsize=(15, 10),
+    dpi=250,
+    terrain=True,
+    terrain_alpha=0.55,
+    terrain_zoom=4,
+    counties=False,
+    county_alpha=0.28,
+    county_width=0.40,
+    roads=False,
+    road_type="primary",
+    road_color=ROAD_COLOR,
+    road_width=0.45,
+    road_alpha=0.30,
+    map_scale="50m",
+    county_scale="20m",
+    satellite=False,
+    satellite_zoom=10,
+    satellite_alpha=0.8,
+    state_color=STATE_COLOR,
+    border_color=BORDER_COLOR):
 
-    Parameters
-    ----------
-    style
-        "weather"   : default model/analysis basemap.
-        "hazards"   : extra-neutral background for warnings/SPC polygons.
-        "dark"      : dark flat basemap.
-        "satellite" : cached, slightly muted Google satellite imagery.
 
-    detail
-        "auto", "conus", "regional", or "local".
 
-    counties
-        None = automatically show only on local maps.
+    # extent pieces
+    west, east, south, north = extent
 
-    roads
-        None = automatically show only on local satellite maps.
+    # build fig
+    fig = plt.figure(figsize=figsize, dpi=dpi, facecolor=FIGURE_BG)
 
-    terrain
-        Add a label-free shaded-relief underlay. None enables it automatically
-        for the main "weather" style and disables it for the other styles.
-
-    terrain_zoom
-        Tile zoom for the relief layer. None selects a conservative level
-        automatically from the map extent.
-
-    terrain_alpha
-        Relief opacity. The default is intentionally subtle so filled weather
-        fields remain visually dominant.
-
-    projection
-        None = centered Lambert for flat maps; tile-native Mercator for
-        satellite maps.
-    """
-    extent = _validate_extent(extent)
-
-    if style not in MAP_STYLES:
-        raise ValueError(f"style must be one of {tuple(MAP_STYLES)}")
-
-    if detail == "auto":
-        detail = _auto_detail(extent)
-    elif detail not in DETAIL_STYLES:
-        raise ValueError("detail must be 'auto', 'conus', 'regional', or 'local'")
-
-    style_cfg = MAP_STYLES[style]
-    detail_cfg = DETAIL_STYLES[detail]
-
-    if counties is None:
-        counties = detail == "local"
-
-    if roads is None:
-        roads = style == "satellite" and detail == "local"
-
-    if terrain is None:
-        terrain = style == "weather"
-
-    satellite = None
-
-    if style == "satellite":
-        TILE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
-        satellite = img_tiles.GoogleTiles(
-            style="satellite",
-            cache=TILE_CACHE_DIR,
-        )
-
-        if projection is None:
-            projection = satellite.crs
-
+    # set proj
     if projection is None:
-        projection = _lambert_for_extent(extent)
+        projection = ccrs.LambertConformal(
+            central_longitude=(west + east) / 2,
+            central_latitude=(south + north) / 2,
+            standard_parallels=(30, 60))
 
-    fig = plt.figure(
-        figsize=figsize,
-        dpi=dpi,
-        facecolor=style_cfg["figure"],
-    )
+    # define map axis area on fig
+    MAP_RECT = [0.015, 0.065, 0.895, 0.805]
 
-    ax = fig.add_axes([0.0, 0.0, 1.0, 1.0],projection=projection,)
-
-    # Always state the CRS of the supplied lon/lat extent.
+    # init map axis and add basic features
+    ax = fig.add_axes(MAP_RECT, projection=projection,)
     ax.set_extent(extent, crs=DATA_CRS)
     ax.set_box_aspect(0.6)
-    ax.set_facecolor(style_cfg["figure"])
+    ax.set_facecolor(WATER_COLOR)
+    ax.add_feature(cfeature.LAND.with_scale(map_scale), facecolor=LAND_COLOR, edgecolor="none", zorder=0,)
+    ax.add_feature(cfeature.OCEAN.with_scale(map_scale), facecolor=WATER_COLOR, edgecolor="none", zorder=0)
+    ax.add_feature(cfeature.LAKES.with_scale(map_scale),facecolor=WATER_COLOR, edgecolor="none", zorder=0.1)
 
-    if style == "satellite":
-        if satellite_zoom is None:
-            satellite_zoom = _auto_tile_zoom(extent)
+    if terrain:
+        ax.add_image( terrain_tiles(),terrain_zoom, alpha=terrain_alpha, zorder=0.25)
 
-        ax.add_image(
-            satellite,
-            satellite_zoom,
-            alpha=satellite_alpha,
-            zorder=0,
-        )
-    else:
-        _add_flat_background(
-            ax,
-            style_cfg,
-            detail_cfg["scale"],
-        )
+    if satellite:
+        SATELLITE_CACHE.mkdir(parents=True, exist_ok=True)
+        satellite_tiles = img_tiles.GoogleTiles(style="satellite", cache=SATELLITE_CACHE,)
+        ax.add_image(satellite_tiles, satellite_zoom, alpha=satellite_alpha, zorder=0.25)
 
-        if terrain:
-            relief = _terrain_tiles()
+    ax.add_feature(cfeature.STATES.with_scale(map_scale), facecolor="none", edgecolor=state_color, linewidth=1.0, alpha=0.80, zorder=10)
+    ax.add_feature(cfeature.BORDERS.with_scale(map_scale), facecolor="none", edgecolor=border_color, linewidth=1.1, alpha=0.88, zorder=10.1)
+    ax.add_feature(cfeature.COASTLINE.with_scale(map_scale), facecolor="none",  edgecolor=border_color, linewidth=1.1, alpha=0.88, zorder=10.2)
 
-            if terrain_zoom is None:
-                terrain_zoom = _auto_terrain_zoom(extent)
-
-            ax.add_image(
-                relief,
-                terrain_zoom,
-                alpha=terrain_alpha,
-                zorder=0.25,
-            )
-
-    _add_boundaries(
-        ax,
-        style_cfg,
-        detail_cfg,
-        counties=counties,
-    )
+    if counties:
+        ax.add_feature(USCOUNTIES.with_scale(county_scale), facecolor="none", edgecolor=COUNTY_COLOR, linewidth=county_width, alpha=county_alpha, zorder=9)
 
     if roads:
-        _add_roads(
-            ax,
-            detail,
-            style_cfg,
-            detail_cfg,
-        )
+        _add_roads(ax, road_type=road_type, color=road_color,linewidth=road_width, alpha=road_alpha)
 
-    # Cleaner than forcing set_box_aspect() + tight_layout() on GeoAxes.
-    try:
-        ax.spines["geo"].set_visible(False)
-    except (KeyError, AttributeError):
-        pass
+    geo_spine = ax.spines["geo"]
+
+    geo_spine.set_visible(True)
+    geo_spine.set_linewidth(2.0)
+    geo_spine.set_edgecolor(UND_GREEN)
+    geo_spine.set_zorder(20)
 
     return fig, ax
-
-
-__all__ = [
-    "build_map",
-    "CONUS_EXTENT",
-    "DATA_CRS",
-    "MAP_STYLES",
-]

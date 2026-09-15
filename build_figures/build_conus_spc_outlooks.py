@@ -35,6 +35,8 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from utils.utils import *
+from utils.map import map_builder
+from utils.figure import figure_builder
 
 
 # Current date (or target date)
@@ -117,11 +119,9 @@ for outlook, outlook_day in zip(outlooks, range(1,4)):
     issue_monthName = calendar.month_abbr[int(issue_month)].upper()
 
 
+    fig, ax = map_builder(extent=[-119, -74, 23, 50], terrain=True, counties=True, county_alpha=0.9)
 
-    from utils.map import build_map
-    fig, ax = build_map(extent=[-122, -73, 21, 56],style="hazards", terrain=True,)
-
-    # this plots the outlook polygons, if they exist
+    # this plots the outlook polys
     try:
         TSTM = ax.add_geometries(outlook.geometry[0], facecolor=outlook.fill[0], edgecolor='black', linewidth=1, alpha=0.3,
                                  zorder=6, crs=ccrs.PlateCarree(), label="THUNDERSTORM")
@@ -139,42 +139,67 @@ for outlook, outlook_day in zip(outlooks, range(1,4)):
         pass
 
 
-    # this make dummy-polygons for the legend to look nice
-    proxy_TSTM = mpatches.Rectangle((0, 0), 1, 0.1, linewidth=2, edgecolor='black', facecolor='#C1E9C1')
-    proxy_MRGL = mpatches.Rectangle((0, 0), 1, 0.1, linewidth=2, edgecolor='black', facecolor='#66A366')
-    proxy_SLGT = mpatches.Rectangle((0, 0), 1, 0.1, linewidth=2, edgecolor='black', facecolor='#FFE066')
-    proxy_ENH = mpatches.Rectangle((0, 0), 1, 0.1, linewidth=2, edgecolor='black', facecolor='#FFA366')
-    proxy_MDT = mpatches.Rectangle((0, 0), 1, 0.1, linewidth=2, edgecolor='black', facecolor='#E06666')
-    proxy_HIGH = mpatches.Rectangle((0, 0), 1, 0.1, linewidth=2, edgecolor='black', facecolor='#EE99EE')
+    spc_colors = [
+        "#C1E9C1",  # TSTM
+        "#66A366",  # MRGL
+        "#FFE066",  # SLGT
+        "#FFA366",  # ENH
+        "#E06666",  # MDT
+        "#EE99EE",  # HIGH
+    ]
 
-
-
-
-    #################################
-    # ADD MAP EXTRAS
-    #################################
-    ax.legend([proxy_TSTM, proxy_MRGL, proxy_SLGT, proxy_ENH, proxy_MDT, proxy_HIGH],
-              ['GENERAL THUNDER', '1: MARGINAL', '2: SLIGHT', '3: ENHANCED', '4: MODERATE', '5: HIGH'],
-              loc='lower left', fontsize=12, facecolor='white', markerscale=8, framealpha=0.7, labelcolor='k', shadow=True,
-              borderpad=0.7, title='SEVERE THUNDERSTORM\n      RISK CATEGORIES', title_fontsize=15).set_zorder(10)
-
-    # plot title, add one to the left with model name and data names, add another to the right with time info
-    plt.figtext(0.08, 1.03, f'   STORM PREDICTION CENTER DAY {outlook_day} CONVECTIVE OUTLOOK', weight='bold', ha='left', fontsize=20, color='white')
-    plt.figtext(0.08, 1.00, f'    ISSUED: {issue_hour}{issue_minute}z {issue_dayName} {issue_monthName} {issue_day}, {issue_year}  |  VALID: {valid_dayName} {valid_monthName} {valid_day}, {valid_year}', ha='left', fontsize=18, color='white')
-    plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-
-    from PIL import Image
-    img = Image.open('utils/images/und-logo.png')
-    #                  side-side  up-down  size   size
-    imgax = fig.add_axes([0.85, 1, 0.06, 0.06], anchor='SE', zorder=3)
-    imgax.imshow(img)
-    imgax.axis('off')
-
+    spc_labels = [
+        "TSTM",
+        "MRGL",
+        "SLGT",
+        "ENH",
+        "MDT",
+        "HIGH",
+    ]
 
     outlook_filename = build_filename("staged_figures/conus_spc_outlooks/", f"outlook", issue_date, variant=f"d{outlook_day}")
 
-    plt.savefig(outlook_filename, bbox_inches="tight")
+    figure_builder(fig, ax,
+        title=f"Day {outlook_day} Convective Outlook",
+        subtitle=f"NOAA Storm Prediction Center",
+        valid=f"Issued: {issue_hour}{issue_minute}z {issue_dayName} {issue_monthName} {issue_day}, {issue_year}  •  Valid: {valid_dayName} {valid_monthName} {valid_day}, {valid_year}",
+        category_colors=spc_colors,
+        category_labels=spc_labels,
+        category_title=None,
+        footer_left=f"NOAA Storm Prediction Center Convective Outlook • https://www.spc.noaa.gov/products/outlook/day{outlook_day}otlk.html",
+        save_path=outlook_filename)
 
 
 elapsed_time = comp_time.time() - st
 print(f"############\nSCRIPT FINISHED: time: {comp_time.strftime("%H:%M:%S", comp_time.gmtime(elapsed_time))}\n############")
+
+
+
+    # # this make dummy-polygons for the legend to look nice
+    # proxy_TSTM = mpatches.Rectangle((0, 0), 1, 0.1, linewidth=2, edgecolor='black', facecolor='#C1E9C1')
+    # proxy_MRGL = mpatches.Rectangle((0, 0), 1, 0.1, linewidth=2, edgecolor='black', facecolor='#66A366')
+    # proxy_SLGT = mpatches.Rectangle((0, 0), 1, 0.1, linewidth=2, edgecolor='black', facecolor='#FFE066')
+    # proxy_ENH = mpatches.Rectangle((0, 0), 1, 0.1, linewidth=2, edgecolor='black', facecolor='#FFA366')
+    # proxy_MDT = mpatches.Rectangle((0, 0), 1, 0.1, linewidth=2, edgecolor='black', facecolor='#E06666')
+    # proxy_HIGH = mpatches.Rectangle((0, 0), 1, 0.1, linewidth=2, edgecolor='black', facecolor='#EE99EE')
+
+
+    # #################################
+    # # ADD MAP EXTRAS
+    # #################################
+    # ax.legend([proxy_TSTM, proxy_MRGL, proxy_SLGT, proxy_ENH, proxy_MDT, proxy_HIGH],
+    #           ['GENERAL THUNDER', '1: MARGINAL', '2: SLIGHT', '3: ENHANCED', '4: MODERATE', '5: HIGH'],
+    #           loc='lower left', fontsize=12, facecolor='white', markerscale=8, framealpha=0.7, labelcolor='k', shadow=True,
+    #           borderpad=0.7, title='SEVERE THUNDERSTORM\n      RISK CATEGORIES', title_fontsize=15).set_zorder(10)
+
+    # # plot title, add one to the left with model name and data names, add another to the right with time info
+    # plt.figtext(0.08, 1.03, f'   STORM PREDICTION CENTER DAY {outlook_day} CONVECTIVE OUTLOOK', weight='bold', ha='left', fontsize=20, color='white')
+    # plt.figtext(0.08, 1.00, f'    ISSUED: {issue_hour}{issue_minute}z {issue_dayName} {issue_monthName} {issue_day}, {issue_year}  |  VALID: {valid_dayName} {valid_monthName} {valid_day}, {valid_year}', ha='left', fontsize=18, color='white')
+    # plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
+
+    # from PIL import Image
+    # img = Image.open('utils/images/und-logo.png')
+    # #                  side-side  up-down  size   size
+    # imgax = fig.add_axes([0.85, 1, 0.06, 0.06], anchor='SE', zorder=3)
+    # imgax.imshow(img)
+    # imgax.axis('off')

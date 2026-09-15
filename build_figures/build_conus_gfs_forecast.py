@@ -43,7 +43,8 @@ from get_data.get_gfs_data import gfs_forecast
 from get_data.get_goes_from_aws import download_goes_file
 from get_data.get_radar_mosaic import get_latest_mosaic
 from get_data.get_wpc_bulletin import plot_bulletin
-
+from utils.map import map_builder
+from utils.figure import figure_builder
 
 # parse date information for sat data download
 utc_date = datetime.now(timezone.utc)

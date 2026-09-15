@@ -1,6 +1,7 @@
 ##########################################
 # A SCRIPT TO LOAD NCSS GFS FORECAST DATA
 # FOR BASIC MAP ANALYSIS
+# KYLE J GILLETT, UNV. NORTH DAKOTA, 2026
 ##########################################
 
 import warnings
