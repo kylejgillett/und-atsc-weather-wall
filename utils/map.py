@@ -106,7 +106,8 @@ def map_builder(
     satellite_zoom=10,
     satellite_alpha=0.8,
     state_color=STATE_COLOR,
-    border_color=BORDER_COLOR):
+    border_color=BORDER_COLOR,
+    border_factor=1.0):
 
 
 
@@ -143,9 +144,9 @@ def map_builder(
         satellite_tiles = img_tiles.GoogleTiles(style="satellite", cache=SATELLITE_CACHE,)
         ax.add_image(satellite_tiles, satellite_zoom, alpha=satellite_alpha, zorder=0.25)
 
-    ax.add_feature(cfeature.STATES.with_scale(map_scale), facecolor="none", edgecolor=state_color, linewidth=1.0, alpha=0.80, zorder=10)
-    ax.add_feature(cfeature.BORDERS.with_scale(map_scale), facecolor="none", edgecolor=border_color, linewidth=1.1, alpha=0.88, zorder=10.1)
-    ax.add_feature(cfeature.COASTLINE.with_scale(map_scale), facecolor="none",  edgecolor=border_color, linewidth=1.1, alpha=0.88, zorder=10.2)
+    ax.add_feature(cfeature.STATES.with_scale(map_scale), facecolor="none", edgecolor=state_color, linewidth=1.0*border_factor, alpha=0.80, zorder=10)
+    ax.add_feature(cfeature.BORDERS.with_scale(map_scale), facecolor="none", edgecolor=border_color, linewidth=1.1*border_factor, alpha=0.88, zorder=10.1)
+    ax.add_feature(cfeature.COASTLINE.with_scale(map_scale), facecolor="none",  edgecolor=border_color, linewidth=1.1*border_factor, alpha=0.88, zorder=10.2)
 
     if counties:
         ax.add_feature(USCOUNTIES.with_scale(county_scale), facecolor="none", edgecolor=COUNTY_COLOR, linewidth=county_width, alpha=county_alpha, zorder=9)

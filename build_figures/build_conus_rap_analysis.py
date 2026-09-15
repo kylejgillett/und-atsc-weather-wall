@@ -235,47 +235,6 @@ sat_time_str = sat_valid.strftime("%H:%MZ")
 
 
 
-#############################################################################################################################################################################
-#############################################################################################################################################################################
-#############################################################################################################################################################################
-
-# # build map function | -118, -76, 22, 52
-# def build_map(extent=[-122, -73, 21, 56], add_sat=False, projection=ccrs.LambertConformal(), style='light'):
-#     fig = plt.figure(figsize=(20, 10), dpi=250)
-#     fig.set_facecolor('#009946')
-#     ax = plt.axes(projection=projection)
-
-#     ax.set_extent(extent)
-#     ax.set_box_aspect(0.6)
-
-#     if style == 'light':
-#         color = 'gray'
-#         alpha = 0.5
-#     else:
-#         color = 'black'
-#         alpha = 0.8
-
-#     #ax.add_feature(cfeature.STATES, edgecolor='navy', alpha=0.4, linestyle='-', linewidth=3, zorder=10)
-#     ax.add_feature(cfeature.STATES, edgecolor='navy', alpha=1.0, linestyle='-', linewidth=1, zorder=10)
-#     ax.add_feature(cfeature.LAND, facecolor=color, alpha=alpha, zorder=0.1)
-#     ax.add_feature(cfeature.OCEAN, facecolor=color, alpha=alpha + 0.2, zorder=0)
-#     ax.add_feature(cfeature.COASTLINE, color='navy', alpha=1, linestyle='-', linewidth=2, zorder=11)
-#     if add_sat:
-#         from cartopy.io import img_tiles
-#         satellite = img_tiles.GoogleTiles(style='satellite')
-#         ax.add_image(satellite, 4)
-
-#     plt.tight_layout()
-
-#     return fig, ax
-#############################################################################################################################################################################
-#############################################################################################################################################################################
-#############################################################################################################################################################################
-
-
-
-
-
 
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -438,7 +397,7 @@ print("    FINISHED 300HPA FLOW MAP")
 #################################
 # BUILD 500HPA FLOW MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, terrain_zoom=6, state_color='navy', border_color='navy')
+fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 # slice data 
 plev500 = np.where(pres_levs == 500)[0][0]
@@ -524,7 +483,7 @@ print("    FINISHED 500HPA FLOW MAP")
 #################################
 # BUILD 500 HPA REL VORT MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy')
+fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 n_reps = 150
 
@@ -582,7 +541,7 @@ composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conu
 
 figure_builder(fig, ax,
     title=f"RAP Analysis • 500hPa",
-    subtitle=f"Heights (m), Rel. Vorticity (/sec•10⁵), Wind (kt)",
+    subtitle=f"Heights (m), Rel. Vorticity "+r"($\mathrm{s}^{-1} \times 10^{5}$)" +", Wind (kt)",
     valid=f"Valid • {valid_date[0:10]} {valid_date[11:-13]}z",
     mappable=contourf,
     cbar_title="Relative Vorticity",
@@ -675,7 +634,7 @@ print("    FINISHED 500HPA REL VORT MAP")
 #################################
 # BUILD 700HPA TEMP MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='k', border_color='k')
+fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 # slice data
 plev700 = np.where(pres_levs == 700)[0][0]
@@ -769,7 +728,7 @@ print("    FINISHED 700HPA TEMP MAP")
 #################################
 # BUILD 850HPA FLOW MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, terrain_zoom=6, state_color='navy', border_color='navy')
+fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 # slice data
 plev850 = np.where(pres_levs == 850)[0][0]
@@ -853,7 +812,7 @@ print("    FINISHED 850HPA FLOW MAP")
 #################################
 # BUILD 850HPA TEMP MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy')
+fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 # plot 850 hpa heights
 contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
@@ -934,7 +893,7 @@ print("    FINISHED 850HPA TEMP MAP")
 # BUILD 850HPA TADV MAP
 #################################
 try:
-    fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='k', border_color='k')
+    fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
     # slice data
     plev850 = np.where(pres_levs == 850)[0][0]
@@ -1035,7 +994,7 @@ except TypeError as e:
 #################################
 # SURFACE TEMPERATURE MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy')
+fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 
 # plot mslp
@@ -1110,7 +1069,7 @@ print("    FINISHED SFC TEMP MAP")
 #################################
 # SURFACE DEWPOINT MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='white', border_color='white')
+fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 
 # plot mslp
@@ -1193,7 +1152,7 @@ print("    FINISHED SFC DWPT MAP")
 #################################
 # SURFACE CAPE MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, terrain_zoom=6, state_color='navy', border_color='navy')
+fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 
 # plot mslp
@@ -1293,7 +1252,7 @@ print("    FINISHED SFC CAPE MAP")
 #################################
 # SURFACE OBS MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, terrain_zoom=6, state_color='white', border_color='white')
+fig, ax = map_builder(extent=[-119, -73, 24, 53], terrain=True, terrain_zoom=6, state_color='white', border_color='white')
 
 
 try:
@@ -1336,7 +1295,7 @@ texts, params, geoms, valid_time = plot_bulletin(ax)
 # plot sat
 ax.imshow(xrds_sat["CMI"].values, origin="upper", extent=sat_extent, transform=sat_crs,
         cmap="gray", norm=PowerNorm(gamma=0.55, vmin=0.0, vmax=1.1), interpolation="nearest",
-        regrid_shape=1800, alpha=0.90, zorder=1)
+        regrid_shape=700, alpha=0.90, zorder=1)
 xrds_sat.close()
 
 

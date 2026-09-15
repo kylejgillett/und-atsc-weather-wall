@@ -64,12 +64,9 @@ def gfs_forecast(center_lat=37.86, center_lon=-98.61, box_size=20, forecast_hour
         # Subset variables
         query.variables(
             'MSLP_Eta_model_reduction_msl',
-            'Pressure_surface',
             'Geopotential_height_isobaric',
             'Temperature_isobaric',
-            'Relative_humidity_isobaric',
             'Temperature_height_above_ground',
-            'Relative_humidity_height_above_ground',
             'u-component_of_wind_height_above_ground',
             'v-component_of_wind_height_above_ground',
             'u-component_of_wind_isobaric',
@@ -106,26 +103,18 @@ def gfs_forecast(center_lat=37.86, center_lon=-98.61, box_size=20, forecast_hour
             if dim.startswith('time') and forecast_data.sizes[dim] == 1:
                 forecast_data = forecast_data.squeeze(dim=dim, drop=True)
         
-        print(
-            f'    GFS FH {fh} COMPLETE: '
-            f'{time_to_select.strftime("%Y-%m-%d %H:%M:%SZ")}'
-        )
+        print(f'    GFS FH {fh} COMPLETE: '
+              f'{time_to_select.strftime("%Y-%m-%d %H:%M:%SZ")}')
         
         # Send forecast to plotting script
         yield fh, time_to_select, forecast_data
-        
-        # Release forecast data before retrieving next hour
         forecast_data.close()
         ncss_data.close()
-        
         del forecast_data
         del ncss_data
-        
         gc.collect()
     
     elapsed_time = comp_time.time() - st
     
-    print(
-        'ALL FORECASTS COMPLETE. Time elapsed:',
-        comp_time.strftime("%H:%M:%S", comp_time.gmtime(elapsed_time))
-    )
+    print('ALL FORECASTS COMPLETE. Time elapsed:',
+        comp_time.strftime("%H:%M:%S", comp_time.gmtime(elapsed_time)))

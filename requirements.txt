@@ -11,7 +11,8 @@ python-awips
 requests
 s3fs
 scipy
-Shapely
-Siphon
-SounderPy
+shapely
+siphon
+sounderPy
 xarray
+goes2go
