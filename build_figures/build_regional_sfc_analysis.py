@@ -136,7 +136,7 @@ sat_type = "GOES-19 Band 02 Visible"
 sat_valid_str = sat_valid.strftime("%Y-%m-%d %H:%MZ")
 sat_time_str = sat_valid.strftime("%H:%MZ")
 
-visible, sat_crs, sat_extent = subset_goes_to_map(xrds_sat, west, east, south, north, pad_km=250)
+visible, sat_crs, sat_extent = subset_goes_to_map(xrds_sat, west, east, south, north, pad_km=300)
 
 
 
