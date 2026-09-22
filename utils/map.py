@@ -88,7 +88,7 @@ def map_builder(
     extent=CONUS_EXTENT,
     projection=None,
     figsize=(15, 10),
-    dpi=250,
+    dpi=150,
     terrain=True,
     terrain_alpha=0.55,
     terrain_zoom=4,

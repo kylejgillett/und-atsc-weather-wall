@@ -1,0 +1,18 @@
+sounderpy @ https://github.com/kylejgillett/sounderpy/releases/download/v3.2.0/sounderpy-3.2.0-py3-none-any.whl
+xarray
+cartopy
+fsspec
+geopandas
+matplotlib
+metpy
+netcdf4
+numpy
+pandas
+pillow
+python-awips
+requests
+s3fs
+scipy
+shapely
+siphon
+goes2go
