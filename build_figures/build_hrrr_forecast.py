@@ -14,7 +14,7 @@ warnings.filterwarnings("ignore")
 from metpy.plots import USCOUNTIES
 from metpy.units import units
 import cartopy.crs   as ccrs
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import scipy.ndimage as ndimage
 import matplotlib.pyplot as plt
 from scipy.ndimage import zoom
@@ -36,7 +36,7 @@ from utils.colormaps import *
 from utils.utils import *
 from utils.map import map_builder
 from utils.figure import figure_builder
-from get_data.get_test import hrrr_forecast
+from get_data.get_hrrr_data import hrrr_forecast
 
 
 now_utc = datetime.now(timezone.utc)
@@ -95,7 +95,7 @@ for fh, valid_time, raw_data in hrrr_forecast(center_lat=center_lat, center_lon=
 
     # PLOT DATA
     fig, ax = map_builder(extent=[west, east, south, north], 
-                         satellite=True, state_color='white', border_color='white')
+                         satellite=True, satellite_zoom=8, state_color='white', border_color='white')
     ax.set_extent((west, east, south, north),crs=ccrs.PlateCarree())
     fig.canvas.draw()
 
@@ -145,18 +145,16 @@ for fh, valid_time, raw_data in hrrr_forecast(center_lat=center_lat, center_lon=
     custom_layout.plot(stationplot, station_data)
 
 
-
-
     composite_filename = build_filename("staged_figures/hrrr_forecasts/", f"hrrr_forecast", now_utc, variant=f"{fh:02d}")
     figure_builder(fig, ax,
-        title=f"HRRR Forecast • Surface",
-        subtitle=f'HRRR Composite Simulated Relfectivity',
-        valid=f"Valid ",
+        title=f"HRRR Forecast  •  Surface",
+        subtitle=f'Composite Simulated Relfectivity (dBz)  •  Total Cloud Cover (%)  •  MSLP (hPa)  •  Forecast Station Plot',
+        valid=f"+ F{fh:03d}hr • VALID {valid_time.strftime('%a %d %b %Y').upper()} - {valid_time.strftime('%HZ')}",
         mappable=pm,
         cbar_title="Reflectivity",
         cbar_units="dBz",
         cbar_ticks=np.arange(-30, 100, 5),
-        footer_left=f"HRRR 3km",
+        footer_left=f"HRRR 3km  •  INIT {(valid_time - timedelta(hours=fh)).strftime('%d %b %Y %HZ').upper()}",
         footer_right=' ',
         save_path=composite_filename)
 

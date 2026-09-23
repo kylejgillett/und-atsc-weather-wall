@@ -8,11 +8,11 @@ STAGE_DIR="staged_figures/conus_outlooks"
 TYPE="outlook"
 BASE_URL="https://weather.atmos.und.edu"
 
-# # Clear old outlook graphics
-# rm -f "$STAGE_DIR"/outlook_*.png
+# Clear old outlook graphics
+rm -f "$STAGE_DIR"/outlook_*.png
 
-# # Build new outlook graphics
-# python "$BUILD_SCRIPT"
+# Build new outlook graphics
+python "$BUILD_SCRIPT"
 
 # Upload outlook graphics
 for FILE in "$STAGE_DIR"/outlook_*_[0-9][0-9]-*.png; do

@@ -67,10 +67,15 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     fh = str(fh).zfill(3)
 
     # extract date objects and set up valid date title
-    run_date = f'{raw_data['reftime'].values}'
-    valid_date = f'{raw_data['reftime'].values.astype('datetime64[ms]').astype(datetime) + timedelta(hours=int(fh))}'
-    valid_day_name = day_to_abbrev(raw_data['reftime'].values.astype('datetime64[ms]').astype(datetime) + timedelta(hours=int(fh)))
-    valid_date_str = f"+ F{fh}hr • Valid • {valid_day_name} {valid_date[5:7]}/{valid_date[8:10]} {valid_date[-8:-6]}z"
+    init_time = forecast_time - timedelta(hours=int(fh))
+    run_date = init_time
+    valid_date = forecast_time
+
+    valid_date_str = (
+        f"+ F{int(fh):03d} • "
+        f"VALID {forecast_time.strftime('%a %d %b %Y').upper()} - "
+        f"{forecast_time.strftime('%HZ')}")
+
     print(valid_date)
 
     # BASIC DATA EXTRACTION
@@ -336,7 +341,7 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
         cbar_title="Wind Speed",
         cbar_units="kts",
         cbar_ticks=np.arange(30, 140, 5),
-        footer_left=f"GFS 0.25° • INIT {run_date[0:10]} {run_date[11:-13]}z",
+        footer_left=f"GFS 0.25° • INIT {init_time.strftime('%d %b %Y %HZ').upper()}",
         save_path=composite_filename)
     
     print("    FINISHED 500HPA FLOW MAP")
@@ -394,7 +399,7 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
         cbar_title="Relative Vorticity",
         cbar_units=r"$\mathrm{s}^{-1} \times 10^{5}$",
         cbar_ticks=np.arange(-30, 52, 2),
-        footer_left=f"GFS 0.25° • INIT {run_date[0:10]} {run_date[11:-13]}z",
+        footer_left=f"GFS 0.25° • INIT {init_time.strftime('%d %b %Y %HZ').upper()}",
         save_path=composite_filename)
     
     print("    FINISHED 500HPA REL VORT MAP")
@@ -525,7 +530,7 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
         cbar_title="Temperature Advection",
         cbar_units='('+u'\xb0'+'C / 3hr)',
         cbar_ticks=np.arange(-7,7.25,1),
-        footer_left=f"GFS 0.25° • INIT {run_date[0:10]} {run_date[11:-13]}z",
+        footer_left=f"GFS 0.25° • INIT {init_time.strftime('%d %b %Y %HZ').upper()}",
         save_path=composite_filename)
     
     print("    FINISHED 850HPA TEMP ADV MAP")
@@ -573,7 +578,7 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
         cbar_title="Temperature",
         cbar_units='°C',
         cbar_ticks=np.arange(-40, 42, 5),
-        footer_left=f"GFS 0.25° • INIT {run_date[0:10]} {run_date[11:-13]}z",
+        footer_left=f"GFS 0.25° • INIT {init_time.strftime('%d %b %Y %HZ').upper()}",
         save_path=composite_filename)
 
     
@@ -626,7 +631,7 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
         cbar_title="Temperature",
         cbar_units='°C',
         cbar_ticks=np.arange(-50, 51, 5),
-        footer_left=f"GFS 0.25° • INIT {run_date[0:10]} {run_date[11:-13]}z",
+        footer_left=f"GFS 0.25° • INIT {init_time.strftime('%d %b %Y %HZ').upper()}",
         save_path=composite_filename)
 
     
@@ -732,7 +737,7 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
         cbar_title="Temperature",
         cbar_units='°C',
         cbar_ticks=np.arange(-50, 51, 5),
-        footer_left=f"GFS 0.25° • INIT {run_date[0:10]} {run_date[11:-13]}z",
+        footer_left=f"GFS 0.25° • INIT {init_time.strftime('%d %b %Y %HZ').upper()}",
         save_path=composite_filename)
     
     print("    FINISHED SFC PTYPE MAP")

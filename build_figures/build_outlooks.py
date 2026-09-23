@@ -46,7 +46,7 @@ from get_data.get_outlooks import (
 
 now_utc = datetime.now(timezone.utc)
 
-CONUS_EXTENT = [-119, -74, 23, 50]
+CONUS_EXTENT = [-119, -74, 23.5, 53.5]
 TROPICAL_EXTENT = [-140, -10, 0, 45]
 OUTPUT_DIR = "staged_figures/conus_outlooks/"
 os.makedirs(OUTPUT_DIR, exist_ok=True)

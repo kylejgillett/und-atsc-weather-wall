@@ -530,7 +530,7 @@ def hrrr_forecast(
     center_lat=37.86,
     center_lon=-98.61,
     box_size=20,
-    forecast_hours=(0,3),#(0, 3, 6, 9, 12, 15, 18),
+    forecast_hours=(0, 3, 6, 9, 12, 15, 18),
     request_pause=10,
 ):
 
