@@ -157,7 +157,7 @@ for outlook, outlook_day in zip(outlooks, range(1,4)):
         "HIGH",
     ]
 
-    outlook_filename = build_filename("staged_figures/conus_spc_outlooks/", f"outlook", issue_date, variant=f"d{outlook_day}")
+    outlook_filename = build_filename("staged_figures/conus_spc_outlooks/", f"outlook", issue_date, variant=f"0{outlook_day}")
 
     figure_builder(fig, ax,
         title=f"Day {outlook_day} Convective Outlook",

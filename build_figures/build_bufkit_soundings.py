@@ -27,6 +27,23 @@ if project_root not in sys.path:
 from utils.utils import *
 
 
+utc_now = datetime.now(timezone.utc)
+
+if utc_now.hour >= 18:
+    set_date = utc_now.replace(hour=18, minute=0, second=0, microsecond=0)
+
+elif utc_now.hour >= 12:
+    set_date = utc_now.replace(hour=12, minute=0, second=0, microsecond=0)
+
+elif utc_now.hour >= 0:
+    set_date = utc_now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+else:
+    previous_day = utc_now - timedelta(days=1)
+    set_date = previous_day.replace(hour=18, minute=0, second=0, microsecond=0)
+
+
+
 #################################
 # KGFK BUFKIT SOUNDING
 #################################
@@ -35,9 +52,9 @@ gfk_data = spy.get_bufkit_data('hrrr', "kgfk", 1)
 snd_date = gfk_data['site_info']['valid-time']
 snd_dt = datetime(int(snd_date[0]), int(snd_date[1]), int(snd_date[2]), int(snd_date[3]), tzinfo=timezone.utc)
 
-analysis_filename = build_filename("staged_figures/soundings/", f"sounding", snd_dt, variant="anl-kgfk")
+analysis_filename = build_filename("staged_figures/soundings/", "sounding", set_date, variant="01-anl-kgfk")
 
-spy.build_sounding(gfk_data, special_parcels='simple', map_zoom=1, color_blind=True, radar='mosaic',
+spy.build_sounding(gfk_data, special_parcels='simple', dark_mode=True, map_zoom=1, color_blind=True, radar='mosaic',
                    save=True, filename=analysis_filename)
 print("    FINISHED GFK BUFKIT SOUNDING")
 #############################################################################################################################################################################
@@ -50,7 +67,6 @@ print("    FINISHED GFK BUFKIT SOUNDING")
 # KGFK BUFKIT SOUNDING COMPOSITE
 #################################
 
-utc_now = datetime.now(timezone.utc)
 offsets = [24, 18, 12, 6]
 
 datas = []
@@ -71,9 +87,9 @@ datas.append(gfk_data)
 snd_date = datas[-1]['site_info']['valid-time']
 snd_dt = datetime(int(snd_date[0]), int(snd_date[1]), int(snd_date[2]), int(snd_date[3]), tzinfo=timezone.utc)
 
-composite_filename = build_filename("staged_figures/soundings/", f"sounding", snd_dt, variant='cmp-kgfk')
+composite_filename = build_filename("staged_figures/soundings/", f"sounding", set_date, variant='02-cmp-kgfk')
 
-spy.build_composite(datas, cmap='copper_r', lw_to_use=[4 for data in datas], alphas_to_use=[1, 0.9, 0.8, 0.7, 0.6][::-1],
+spy.build_composite(datas, cmap='viridis', dark_mode=True, lw_to_use=[4 for data in datas], alphas_to_use=[1, 0.9, 0.8, 0.7, 0.6][::-1],
                    save=True, filename=composite_filename)
 
 

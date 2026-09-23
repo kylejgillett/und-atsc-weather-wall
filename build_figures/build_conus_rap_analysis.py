@@ -1252,7 +1252,7 @@ print("    FINISHED SFC CAPE MAP")
 #################################
 # SURFACE OBS MAP
 #################################
-fig, ax = map_builder(extent=[-119, -73, 24, 53], terrain=True, terrain_zoom=6, state_color='white', border_color='white')
+fig, ax = map_builder(extent=[-118, -74, 24, 52], terrain=True, terrain_zoom=6, state_color='white', border_color='white')
 
 
 try:

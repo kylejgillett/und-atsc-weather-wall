@@ -104,9 +104,10 @@ hours = 96
 # get station data and build the plot
 now_utc = datetime.now(timezone.utc)
 
-for station_id, id_num in zip(stations, range(len(stations))):
+for id_num, station_id in enumerate(stations):
 
-    comp_time.sleep(10)
+    if id_num > 0:
+        comp_time.sleep(5)
 
     # get data
     df = get_asos_obs(station_id, hours=hours)

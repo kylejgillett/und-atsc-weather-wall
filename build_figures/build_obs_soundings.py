@@ -30,35 +30,39 @@ from utils.utils import *
 utc_now = datetime.now(timezone.utc)
 current_date = utc_now.date()
 
-# decide search time (00z or 12z)
-if utc_now.hour >= 12:
-    # after 12z, use 12z of the current day
-    search_date = datetime(current_date.year, current_date.month, current_date.day, 12)
-else:
-    # between 00z and 12z, use 00z of the current day
-    search_date = datetime(current_date.year, current_date.month, current_date.day, 0)
+if utc_now.hour >= 18:
+    set_date = utc_now.replace(
+        hour=18, minute=0, second=0, microsecond=0)
+
+elif utc_now.hour >= 12:
+    set_date = utc_now.replace(
+        hour=12, minute=0, second=0, microsecond=0)
+
+elif utc_now.hour >= 0:
+    set_date = utc_now.replace(
+        hour=0, minute=0, second=0, microsecond=0)
 
 
-year_str   = search_date.strftime("%Y")
-month_str  = search_date.strftime("%m")
-day_str    = search_date.strftime("%d")
-hour_str   = search_date.strftime("%H")
+year_str  = set_date.strftime("%Y")
+month_str = set_date.strftime("%m")
+day_str   = set_date.strftime("%d")
+hour_str  = set_date.strftime("%H")
 
 
 #################################
 # OBS SOUNDINGS
 #################################
-ids = ["kggw", "kbis", "kabr", "kinl", "kmpx", "kunr"]
+ids = ["kbis", "kabr", "kggw", "kunr", "kinl", "kmpx"]
 
-for id in ids:
+for id, i in zip(ids, range(3,len(ids)+3)):
     try:
         data = spy.get_obs_data(id, year_str, month_str, day_str, hour_str)
 
         snd_date = data['site_info']['valid-time']
-        snd_dt = datetime(int(snd_date[0]), int(snd_date[1]), int(snd_date[2]), int(snd_date[3]), tzinfo=timezone.utc)
-        obs_filename = build_filename("staged_figures/soundings/", f"sounding", snd_dt, variant=f'obs-{id}')
+        #snd_dt = datetime(int(snd_date[0]), int(snd_date[1]), int(snd_date[2]), int(snd_date[3]), tzinfo=timezone.utc)
+        obs_filename = build_filename("staged_figures/soundings/", "sounding", set_date, variant=f"{i:02d}-obs-{id}")
 
-        spy.build_sounding(data, special_parcels='simple', map_zoom=1, color_blind=True, radar='mosaic',
+        spy.build_sounding(data, special_parcels='simple', dark_mode=True, map_zoom=1, color_blind=True, radar='mosaic',
                     save=True, filename=obs_filename)
     except:
         print(f"    !!! NO DATA FOUND FOR {id.upper()}")
