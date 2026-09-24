@@ -27,13 +27,15 @@ def build_filename(storage, figtype, validtime, variant=None, order=None):
 # convert u and v components to cardinal direction strings 
 def wind_to_dir(u, v):
 
-    wind_dir_deg = (math.degrees(math.atan2(u, v)) + 360) % 360
+    if np.isnan(u) or np.isnan(v):
+        return "--"
+
+    wind_dir_deg = (np.degrees(np.arctan2(-u, -v)) + 360) % 360
 
     dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
             "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
 
-    # Each sector covers 360/16 = 22.5 degrees
-    wind_dir_deg = (np.degrees(np.arctan2(-u, -v)) + 360) % 360
+    # each sector covers 360/16 = 22.5 degrees
     idx = int((wind_dir_deg + 11.25) // 22.5) % 16
 
     return dirs[idx]
