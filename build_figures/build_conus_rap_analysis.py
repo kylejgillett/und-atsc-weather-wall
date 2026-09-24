@@ -76,6 +76,12 @@ east = center_lon  + box_size
 south = center_lat - box_size
 north = center_lat + box_size
 
+projection = ccrs.LambertConformal(
+    central_longitude=-95.0,
+    central_latitude=25.0,
+    standard_parallels=(25.0, 25.0)
+)
+
 # pull rap data
 raw_data = analysis(box_size=box_size)
 
@@ -242,7 +248,7 @@ sat_time_str = sat_valid.strftime("%H:%MZ")
 #################################
 # BUILD 300 HPA MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, terrain_zoom=6, state_color='navy', border_color='navy')
+fig, ax = map_builder(projection=projection, extent=[-119, -74, 23.5, 53.5], terrain=True, terrain_zoom=6, state_color='navy', border_color='navy')
 
 # slice data
 plev300 = np.where(pres_levs == 300)[0][0]
@@ -397,7 +403,7 @@ print("    FINISHED 300HPA FLOW MAP")
 #################################
 # BUILD 500HPA FLOW MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 # slice data 
 plev500 = np.where(pres_levs == 500)[0][0]
@@ -483,7 +489,7 @@ print("    FINISHED 500HPA FLOW MAP")
 #################################
 # BUILD 500 HPA REL VORT MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 n_reps = 150
 
@@ -634,7 +640,7 @@ print("    FINISHED 500HPA REL VORT MAP")
 #################################
 # BUILD 700HPA TEMP MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 # slice data
 plev700 = np.where(pres_levs == 700)[0][0]
@@ -728,7 +734,7 @@ print("    FINISHED 700HPA TEMP MAP")
 #################################
 # BUILD 850HPA FLOW MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 # slice data
 plev850 = np.where(pres_levs == 850)[0][0]
@@ -812,7 +818,7 @@ print("    FINISHED 850HPA FLOW MAP")
 #################################
 # BUILD 850HPA TEMP MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 # plot 850 hpa heights
 contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
@@ -893,7 +899,7 @@ print("    FINISHED 850HPA TEMP MAP")
 # BUILD 850HPA TADV MAP
 #################################
 try:
-    fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+    fig, ax = map_builder(projection=projection, extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
     # slice data
     plev850 = np.where(pres_levs == 850)[0][0]
@@ -994,7 +1000,7 @@ except TypeError as e:
 #################################
 # SURFACE TEMPERATURE MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 
 # plot mslp
@@ -1069,7 +1075,7 @@ print("    FINISHED SFC TEMP MAP")
 #################################
 # SURFACE DEWPOINT MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 
 # plot mslp
@@ -1152,7 +1158,7 @@ print("    FINISHED SFC DWPT MAP")
 #################################
 # SURFACE CAPE MAP
 #################################
-fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 
 # plot mslp
@@ -1252,7 +1258,7 @@ print("    FINISHED SFC CAPE MAP")
 #################################
 # SURFACE OBS MAP
 #################################
-fig, ax = map_builder(extent=[-118, -74, 24, 52], terrain=True, terrain_zoom=6, state_color='white', border_color='white')
+fig, ax = map_builder(projection=projection, extent=[-118, -74, 24, 52], terrain=True, terrain_zoom=6, state_color='white', border_color='white')
 
 
 try:

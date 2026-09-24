@@ -47,7 +47,7 @@ from get_data.get_outlooks import (
 now_utc = datetime.now(timezone.utc)
 
 CONUS_EXTENT = [-119, -74, 23.5, 53.5]
-TROPICAL_EXTENT = [-140, -10, 0, 45]
+TROPICAL_EXTENT = [-140, -10, 5, 47]
 OUTPUT_DIR = "staged_figures/conus_outlooks/"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -132,7 +132,7 @@ WSO_COLORS = {
     "50%": "#FF0000",
     "80%": "#990099",
 }
-WSO_LABELS = ["10-30%", "30-50%", "50-80%", "80%+"]
+WSO_LABELS = ["10-\n30%", "30-\n50%", "50-\n80%", "80%+"]
 
 NHC_COLORS = {
     "low": "#FFFF00",
