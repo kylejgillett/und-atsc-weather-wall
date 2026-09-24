@@ -24,14 +24,14 @@ TIME="${RAW_DATETIME#*_}"
 
 DATETIME="${DATE:0:4}-${DATE:4:2}-${DATE:6:2}T${TIME:0:2}:${TIME:2:2}:${TIME:4:2}Z"
 
-echo "Uploading: $FILENAME"
-echo "Datetime:  $DATETIME"
+#echo "Uploading: $FILENAME"
+#echo "Datetime:  $DATETIME"
 
 curl --location \
   "${BASE_URL}/api/graphics/upload/${TYPE}/${DATETIME}" \
   --header "X-API-Key: ${WEATHER_WALL_API_KEY}" \
   --form "=@${FILE}" \
   --form "fileName=${FILENAME}" \
-  --write-out "\nHTTP status: %{http_code}\n"
+  --write-out "\n  + UPLOAD STATUS: http-%{http_code}\n"
 
-echo "Regional RAP analysis upload finished."
+#echo "Regional RAP analysis upload finished."

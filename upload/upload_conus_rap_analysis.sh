@@ -28,17 +28,17 @@ for FILE in "$STAGE_DIR"/conus_analysis_*.png; do
 
     SUFFIX=$(echo "$FILENAME" | sed -E 's/^conus_analysis_[0-9]{8}_[0-9]{6}_([^.]*)\.png$/\1/')
 
-    echo "Uploading: $FILENAME"
-    echo "Datetime:  $DATETIME"
-    echo "Suffix:    $SUFFIX"
+    #echo "Uploading: $FILENAME"
+    #echo "Datetime:  $DATETIME"
+    #echo "Suffix:    $SUFFIX"
 
     curl --location \
       "${BASE_URL}/api/graphics/upload/${TYPE}/${DATETIME}/${SUFFIX}" \
       --header "X-API-Key: ${WEATHER_WALL_API_KEY}" \
       --form "=@${FILE}" \
       --form "fileName=${FILENAME}" \
-      --write-out "\nHTTP status: %{http_code}\n"
+      --write-out "\n  + UPLOAD STATUS: http-%{http_code}\n"
 
 done
 
-echo "CONUS RAP analysis upload finished."
+#echo "CONUS RAP analysis upload finished."

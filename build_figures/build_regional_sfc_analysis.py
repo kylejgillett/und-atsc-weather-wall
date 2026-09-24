@@ -81,12 +81,21 @@ pres_levs = raw_data['isobaric'][:]
 pres_levs = pres_levs / 100
 
 # DATE INFO
-try:
-    data_date = raw_data['time'].values[0]
-except:
-    data_date = raw_data['time1'].values[0]
-    pass
-valid_date = f'{data_date}'
+data_date = None
+
+for time_var in ["time", "time1", "time2", "time3", "time4"]:
+    if time_var in raw_data:
+        try:
+            data_date = np.atleast_1d(raw_data[time_var].values)[0]
+            break
+        except Exception:
+            continue
+
+if data_date is None:
+    print("ERROR: Could not find RAP valid time.")
+    sys.exit(1)
+
+valid_date = f"{data_date}"
 
 
 # BASIC DATA EXTRACTION

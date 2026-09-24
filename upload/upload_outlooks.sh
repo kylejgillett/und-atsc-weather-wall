@@ -31,20 +31,20 @@ for FILE in "$STAGE_DIR"/outlook_*_[0-9][0-9]-*.png; do
 
     SUFFIX=$(echo "$FILENAME" | sed -E 's/^outlook_[0-9]{8}_[0-9]{6}_([0-9]{2}-.+)\.png$/\1/')
 
-    echo "Uploading: $FILENAME"
-    echo "Datetime:  $DATETIME"
-    echo "Suffix:    $SUFFIX"
+    #echo "Uploading: $FILENAME"
+    #echo "Datetime:  $DATETIME"
+    #echo "Suffix:    $SUFFIX"
 
     curl --location \
       "${BASE_URL}/api/graphics/upload/${TYPE}/${DATETIME}/${SUFFIX}" \
       --header "X-API-Key: ${WEATHER_WALL_API_KEY}" \
       --form "=@${FILE}" \
       --form "fileName=${FILENAME}" \
-      --write-out "\nHTTP status: %{http_code}\n"
+      --write-out "\n  + UPLOAD STATUS: http-%{http_code}\n"
 
 done
 
-echo "Outlook upload finished."
+#echo "Outlook upload finished."
 
 
 

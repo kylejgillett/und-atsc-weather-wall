@@ -39,19 +39,19 @@ for FILE in "$STAGE_DIR"/gfs_*.png; do
       's/^gfs_[0-9]{3}[ab]_[0-9]{8}_[0-9]{6}_([^.]*)\.png$/\1/')
 
     echo
-    echo "Uploading: $FILENAME"
-    echo "Type:      $TYPE"
-    echo "Datetime:  $DATETIME"
-    echo "Suffix:    $SUFFIX"
+    #echo "Uploading: $FILENAME"
+    #echo "Type:      $TYPE"
+    #echo "Datetime:  $DATETIME"
+    #echo "Suffix:    $SUFFIX"
 
     curl --location \
       "${BASE_URL}/api/graphics/upload/${TYPE}/${DATETIME}/${SUFFIX}" \
       --header "X-API-Key: ${WEATHER_WALL_API_KEY}" \
       --form "=@${FILE}" \
       --form "fileName=${FILENAME}" \
-      --write-out "\nHTTP status: %{http_code}\n"
+      --write-out "\n  + UPLOAD STATUS: http-%{http_code}\n"
 
 done
 
-echo
-echo "GFS upload finished."
+#echo
+#echo "GFS upload finished."

@@ -15,6 +15,8 @@ rm -f "$STAGE_DIR"/sounding_*_[0-9][0-9]-cmp-*.png
 # Build new BUFKIT sounding graphics
 python "$BUILD_SCRIPT"
 
+DELETE_DONE=false
+
 # Upload BUFKIT soundings in loop order
 for FILE in "$STAGE_DIR"/sounding_*_[0-9][0-9]-{anl,cmp}-*.png; do
 
@@ -29,16 +31,29 @@ for FILE in "$STAGE_DIR"/sounding_*_[0-9][0-9]-{anl,cmp}-*.png; do
 
     SUFFIX=$(echo "$FILENAME" | sed -E 's/^sounding_[0-9]{8}_[0-9]{6}_([^.]*)\.png$/\1/')
 
-    echo "Uploading: $FILENAME"
-    echo "Suffix:    $SUFFIX"
+
+    if [ "$DELETE_DONE" = false ]; then
+        echo
+        echo "\n  + Deleting soundings older than: $DATETIME"
+        curl --fail-with-body \
+          --location \
+          --request DELETE \
+          "${BASE_URL}/api/graphics/${TYPE}/${DATETIME}" \
+          --header "X-API-Key: ${WEATHER_WALL_API_KEY}" \
+          --write-out "  "
+        DELETE_DONE=true
+    fi
+
+    #echo "Uploading: $FILENAME"
+    #echo "Suffix:    $SUFFIX"
 
     curl --location \
       "${BASE_URL}/api/graphics/upload/${TYPE}/${DATETIME}/${SUFFIX}" \
       --header "X-API-Key: ${WEATHER_WALL_API_KEY}" \
       --form "=@${FILE}" \
       --form "fileName=${FILENAME}" \
-      --write-out "\nHTTP status: %{http_code}\n"
+      --write-out "\n  + UPLOAD STATUS: http-%{http_code}\n"
 
 done
 
-echo "BUFKIT sounding upload finished."
+#echo "BUFKIT sounding upload finished."

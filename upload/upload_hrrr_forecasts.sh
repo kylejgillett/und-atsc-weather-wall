@@ -27,16 +27,20 @@ for FILE in $FILES; do
 
     DATETIME="${DATE:0:4}-${DATE:4:2}-${DATE:6:2}T${TIME:0:2}:${TIME:2:2}:${TIME:4:2}Z"
 
-    echo "Uploading: $FILENAME"
-    echo "Datetime:  $DATETIME"
+    SUFFIX=$(echo "$FILENAME" | sed -E \
+      's/^hrrr_forecast_[0-9]{8}_[0-9]{6}_([^.]*)\.png$/\1/')
+
+    #echo "Uploading: $FILENAME"
+    #echo "Datetime:  $DATETIME"
+    #echo "Suffix:    $SUFFIX"
 
     curl --location \
-      "${BASE_URL}/api/graphics/upload/${TYPE}/${DATETIME}" \
+      "${BASE_URL}/api/graphics/upload/${TYPE}/${DATETIME}/${SUFFIX}" \
       --header "X-API-Key: ${WEATHER_WALL_API_KEY}" \
       --form "=@${FILE}" \
       --form "fileName=${FILENAME}" \
-      --write-out "\nHTTP status: %{http_code}\n"
+      --write-out "\n  + UPLOAD STATUS: http-%{http_code}\n"
 
 done
 
-echo "HRRR forecast upload finished."
+#echo "HRRR forecast upload finished."

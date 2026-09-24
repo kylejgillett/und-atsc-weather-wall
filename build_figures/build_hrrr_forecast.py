@@ -147,7 +147,7 @@ for fh, valid_time, raw_data in hrrr_forecast(center_lat=center_lat, center_lon=
 
     composite_filename = build_filename("staged_figures/hrrr_forecasts/", f"hrrr_forecast", now_utc, variant=f"{fh:02d}")
     figure_builder(fig, ax,
-        title=f"HRRR Forecast  •  Surface",
+        title=f"{(valid_time - timedelta(hours=fh)).strftime("%HZ")} HRRR Forecast  •  Surface",
         subtitle=f'Composite Simulated Relfectivity (dBz)  •  Total Cloud Cover (%)  •  MSLP (hPa)  •  Forecast Station Plot',
         valid=f"+ F{fh:03d}hr • VALID {valid_time.strftime('%a %d %b %Y').upper()} - {valid_time.strftime('%HZ')}",
         mappable=pm,

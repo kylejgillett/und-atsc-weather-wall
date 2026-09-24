@@ -228,14 +228,14 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     composite_filename = build_filename("staged_figures/conus_gfs_forecasts/", f"gfs_300a", utc_date, variant=fh)
 
     figure_builder(fig, ax,
-        title=f"GFS Forecast • 300hPa",
+        title=f"{run_date.strftime('%HZ')} GFS Forecast • 300hPa",
         subtitle=f"Heights (m), Wind (kt)",
         valid=valid_date_str,
         mappable=contourf,
         cbar_title="Wind Speed",
         cbar_units="kts",
         cbar_ticks=np.arange(50, 160, 5)[::1],
-        footer_left=f"GFS 0.25° • INIT {run_date[0:10]} {run_date[11:-13]}z",
+        footer_left=f"GFS 0.25° • INIT {run_date.strftime('%d %b %Y %HZ').upper()}",
         save_path=composite_filename)
 
     print("    FINISHED 300HPA FLOW MAP")
@@ -282,14 +282,14 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     composite_filename = build_filename("staged_figures/conus_gfs_forecasts/", f"gfs_300b", utc_date, variant=fh)
 
     figure_builder(fig, ax,
-        title=f"GFS Forecast • 2PVU Surface",
+        title=f"{run_date.strftime('%HZ')} GFS Forecast • 2PVU Surface",
         subtitle=f"Pressure (hPa), Potential Temperature (K), Wind (kt)",
         valid=valid_date_str,
         mappable=contourf,
         cbar_title="2PVU Potential Temperature",
         cbar_units=r"K",
         cbar_ticks=np.arange(270, 410, 10),
-        footer_left=f"GFS 0.25° • INIT {run_date[0:10]} {run_date[11:-13]}z",
+        footer_left=f"GFS 0.25° • INIT {run_date.strftime('%d %b %Y %HZ').upper()}",
         save_path=composite_filename)
     
     print("    FINISHED 300HPA PVA MAP")
@@ -334,7 +334,7 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     composite_filename = build_filename("staged_figures/conus_gfs_forecasts/", f"gfs_500a", utc_date, variant=fh)
 
     figure_builder(fig, ax,
-        title=f"GFS Forecast • 500hPa",
+        title=f"{run_date.strftime('%HZ')} GFS Forecast • 500hPa",
         subtitle=f"Heights (m), Wind (kt)",
         valid=valid_date_str,
         mappable=contourf,
@@ -392,7 +392,7 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     composite_filename = build_filename("staged_figures/conus_gfs_forecasts/", f"gfs_500b", utc_date, variant=fh)
 
     figure_builder(fig, ax,
-        title=f"GFS Forecast • 500hPa",
+        title=f"{run_date.strftime('%HZ')} GFS Forecast • 500hPa",
         subtitle="Heights (m), Rel. Vorticity "+r"($\mathrm{s}^{-1} \times 10^{5}$)" +", Wind (kt)",
         valid=valid_date_str,
         mappable=contourf,
@@ -523,7 +523,7 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     composite_filename = build_filename("staged_figures/conus_gfs_forecasts/", f"gfs_850b", utc_date, variant=fh)
 
     figure_builder(fig, ax,
-        title=f"GFS Forecast • 850hPa",
+        title=f"{run_date.strftime('%HZ')} GFS Forecast • 850hPa",
         subtitle=f'Heights (m), 3hr Temperature Adv (C/3hr), Frontogenesis (>2'+u'\xb0'+'C / 100km / 3hr), Wind (kt)',
         valid=valid_date_str,
         mappable=tadv_contourf,
@@ -571,7 +571,7 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     composite_filename = build_filename("staged_figures/conus_gfs_forecasts/", f"gfs_850a", utc_date, variant=fh)
 
     figure_builder(fig, ax,
-        title=f"GFS Forecast • 850hPa",
+        title=f"{run_date.strftime('%HZ')} GFS Forecast • 850hPa",
         subtitle=f'Heights (m), Temperature (C), Wind (kts)',
         valid=valid_date_str,
         mappable=contourf,
@@ -624,14 +624,14 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     composite_filename = build_filename("staged_figures/conus_gfs_forecasts/", f"gfs_000a", utc_date, variant=fh)
 
     figure_builder(fig, ax,
-        title=f"GFS Forecast • Surface",
+        title=f"{run_date.strftime('%HZ')} GFS Forecast • Surface",
         subtitle=f'MSLP (hPa), 2m Temperature (C), 10m Wind (kts)',
         valid=valid_date_str,
         mappable=contourf,
         cbar_title="Temperature",
         cbar_units='°C',
         cbar_ticks=np.arange(-50, 51, 5),
-        footer_left=f"GFS 0.25° • INIT {init_time.strftime('%d %b %Y %HZ').upper()}",
+        footer_left=f"GFS 0.25° • INIT {run_date.strftime('%d %b %Y %HZ').upper()}",
         save_path=composite_filename)
 
     
@@ -730,14 +730,14 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     composite_filename = build_filename("staged_figures/conus_gfs_forecasts/", f"gfs_000b", utc_date, variant=fh)
 
     figure_builder(fig, ax,
-        title=f"GFS Forecast • Surface",
+        title=f"{run_date.strftime('%HZ')} GFS Forecast • Surface",
         subtitle=f'MSLP (hPa), Composite Reflectivity Precip Type (dBZ), 1000-500 hPa Thickness (m), 10m Wind (kts)',
         valid=valid_date_str,
         mappable=None,
         cbar_title="Temperature",
         cbar_units='°C',
         cbar_ticks=np.arange(-50, 51, 5),
-        footer_left=f"GFS 0.25° • INIT {init_time.strftime('%d %b %Y %HZ').upper()}",
+        footer_left=f"GFS 0.25° • INIT {run_date.strftime('%d %b %Y %HZ').upper()}",
         save_path=composite_filename)
     
     print("    FINISHED SFC PTYPE MAP")

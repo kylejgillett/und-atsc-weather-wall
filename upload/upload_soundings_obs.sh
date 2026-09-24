@@ -14,6 +14,8 @@ rm -f "$STAGE_DIR"/sounding_*_[0-9][0-9]-obs-*.png
 # Build new observed sounding graphics
 python "$BUILD_SCRIPT"
 
+DELETE_DONE=false
+
 # Upload observed soundings in loop order
 for FILE in "$STAGE_DIR"/sounding_*_[0-9][0-9]-obs-*.png; do
 
@@ -28,17 +30,30 @@ for FILE in "$STAGE_DIR"/sounding_*_[0-9][0-9]-obs-*.png; do
 
     SUFFIX=$(echo "$FILENAME" | sed -E 's/^sounding_[0-9]{8}_[0-9]{6}_([^.]*)\.png$/\1/')
 
-    echo "Uploading: $FILENAME"
-    echo "Datetime:  $DATETIME"
-    echo "Suffix:    $SUFFIX"
+    #echo "Uploading: $FILENAME"
+    #echo "Datetime:  $DATETIME"
+    #echo "Suffix:    $SUFFIX"
+
+    if [ "$DELETE_DONE" = false ]; then
+        echo
+        echo "\n  + Deleting soundings older than: $DATETIME"
+        curl --fail-with-body \
+          --location \
+          --request DELETE \
+          "${BASE_URL}/api/graphics/${TYPE}/${DATETIME}" \
+          --header "X-API-Key: ${WEATHER_WALL_API_KEY}" \
+          --write-out "  "
+        DELETE_DONE=true
+    fi
+
 
     curl --location \
       "${BASE_URL}/api/graphics/upload/${TYPE}/${DATETIME}/${SUFFIX}" \
       --header "X-API-Key: ${WEATHER_WALL_API_KEY}" \
       --form "=@${FILE}" \
       --form "fileName=${FILENAME}" \
-      --write-out "\nHTTP status: %{http_code}\n"
+      --write-out "\n  + UPLOAD STATUS: http-%{http_code}\n"
 
 done
 
-echo "Observed sounding upload finished."
+#echo "Observed sounding upload finished."
