@@ -16,6 +16,8 @@ echo "Building GFS graphics..."
 python "$BUILD_SCRIPT"
 echo "GFS build finished."
 
+DELETE_DONE=false
+
 # Upload all GFS graphics
 for FILE in "$STAGE_DIR"/gfs_*.png; do
 
@@ -37,6 +39,19 @@ for FILE in "$STAGE_DIR"/gfs_*.png; do
     # Forecast hour is the suffix
     SUFFIX=$(echo "$FILENAME" | sed -E \
       's/^gfs_[0-9]{3}[ab]_[0-9]{8}_[0-9]{6}_([^.]*)\.png$/\1/')
+
+
+    if [ "$DELETE_DONE" = false ]; then
+        echo
+        echo "\n  + Deleting older than: $DATETIME"
+        curl --fail-with-body \
+          --location \
+          --request DELETE \
+          "${BASE_URL}/api/graphics/${TYPE}/${DATETIME}" \
+          --header "X-API-Key: ${WEATHER_WALL_API_KEY}" \
+          --write-out "  "
+        DELETE_DONE=true
+    fi
 
     echo
     #echo "Uploading: $FILENAME"
