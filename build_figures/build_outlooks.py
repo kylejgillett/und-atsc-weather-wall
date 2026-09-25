@@ -613,7 +613,12 @@ else:
 
 
 
-
+TROPICAL_PROJECTION = ccrs.Mercator(
+    central_longitude=-75,
+    min_latitude=-15,
+    max_latitude=65,
+)
+TROPICAL_EXTENT = [-150, -10, -10, 55]
 
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -624,7 +629,7 @@ else:
 outlook = get_nhc_7day_tropical_outlook()
 
 if outlook is not None:
-    fig, ax = map_builder(extent=TROPICAL_EXTENT, terrain=True, terrain_zoom=3, counties=False, map_scale="50m")
+    fig, ax = map_builder(extent=TROPICAL_EXTENT, projection=TROPICAL_PROJECTION, terrain=True, terrain_zoom=3, counties=False, map_scale="50m")
 
     regions = outlook.get("regions")
     motion = outlook.get("motion")
@@ -745,7 +750,7 @@ if outlook is not None:
             NHC_STORM_COLORS["S"],
             NHC_STORM_COLORS["H"],
             NHC_STORM_COLORS["M"]],
-        category_labels=["LOW\n≤30%", "MED\n40-60%", "HIGH\n≥70%", "TD", "TS", "HUR", "MHUR"],
+        category_labels=["LOW\n≤30%", "MED\n40-\n60%", "HIGH\n≥70%", "TD", "TS", "HUR", "MAJ\nHUR"],
         category_title=None,
         footer_left="NOAA National Hurricane Center • https://www.nhc.noaa.gov/gtwo.php",
         save_path=outlook_filename)
