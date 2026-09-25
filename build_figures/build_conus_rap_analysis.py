@@ -1170,7 +1170,7 @@ plt.close(fig)
 #################################
 # SURFACE CAPE MAP
 #################################
-fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=False, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 
 # plot mslp
