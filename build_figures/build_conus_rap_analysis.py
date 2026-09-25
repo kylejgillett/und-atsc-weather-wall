@@ -219,18 +219,18 @@ except:
     pass
 
 
-# get satellite data
-sat_file = download_goes19_visible(utc_now[0], utc_now[4], utc_now[3])
-xrds_sat = xr.open_dataset(sat_file)
-sat_crs = xrds_sat.FOV.crs
-sat_x = xrds_sat.FOV.x.values
-sat_y = xrds_sat.FOV.y.values
-sat_extent = (float(np.nanmin(sat_x)), float(np.nanmax(sat_x)),
-              float(np.nanmin(sat_y)), float(np.nanmax(sat_y)))
-sat_valid = datetime.fromisoformat(xrds_sat.time_coverage_start.replace("Z", "+00:00"))
-sat_type = "GOES-19 Band 02 Visible"
-sat_valid_str = sat_valid.strftime("%Y-%m-%d %H:%MZ")
-sat_time_str = sat_valid.strftime("%H:%MZ")
+# # get satellite data
+# sat_file = download_goes19_visible(utc_now[0], utc_now[4], utc_now[3])
+# xrds_sat = xr.open_dataset(sat_file)
+# sat_crs = xrds_sat.FOV.crs
+# sat_x = xrds_sat.FOV.x.values
+# sat_y = xrds_sat.FOV.y.values
+# sat_extent = (float(np.nanmin(sat_x)), float(np.nanmax(sat_x)),
+#               float(np.nanmin(sat_y)), float(np.nanmax(sat_y)))
+# sat_valid = datetime.fromisoformat(xrds_sat.time_coverage_start.replace("Z", "+00:00"))
+# sat_type = "GOES-19 Band 02 Visible"
+# sat_valid_str = sat_valid.strftime("%Y-%m-%d %H:%MZ")
+# sat_time_str = sat_valid.strftime("%H:%MZ")
 
 
 #############################################################################################################################################################################
@@ -248,7 +248,7 @@ sat_time_str = sat_valid.strftime("%H:%MZ")
 #################################
 # BUILD 300 HPA MAP
 #################################
-fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53.5], terrain=True, terrain_zoom=6, state_color='navy', border_color='navy')
+fig, ax = map_builder(projection=projection, extent=[-119, -75, 23.5, 53], terrain=True, terrain_zoom=6, state_color='navy', border_color='navy')
 
 # slice data
 plev300 = np.where(pres_levs == 300)[0][0]
@@ -313,6 +313,7 @@ figure_builder(fig, ax,
     save_path=composite_filename)
 
 print("    FINISHED 300HPA FLOW MAP")
+plt.close(fig)
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -403,7 +404,7 @@ print("    FINISHED 300HPA FLOW MAP")
 #################################
 # BUILD 500HPA FLOW MAP
 #################################
-fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 # slice data 
 plev500 = np.where(pres_levs == 500)[0][0]
@@ -469,6 +470,7 @@ figure_builder(fig, ax,
     save_path=composite_filename)
 
 print("    FINISHED 500HPA FLOW MAP")
+plt.close(fig)
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -489,7 +491,7 @@ print("    FINISHED 500HPA FLOW MAP")
 #################################
 # BUILD 500 HPA REL VORT MAP
 #################################
-fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=False, state_color='navy', border_color='navy', border_factor=1.5)
 
 n_reps = 150
 
@@ -557,6 +559,7 @@ figure_builder(fig, ax,
     save_path=composite_filename)
 
 print("    FINISHED 500HPA REL VORT MAP")
+plt.close(fig)
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -640,7 +643,7 @@ print("    FINISHED 500HPA REL VORT MAP")
 #################################
 # BUILD 700HPA TEMP MAP
 #################################
-fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=False, state_color='navy', border_color='navy', border_factor=1.5)
 
 # slice data
 plev700 = np.where(pres_levs == 700)[0][0]
@@ -714,6 +717,7 @@ figure_builder(fig, ax,
     save_path=composite_filename)
 
 print("    FINISHED 700HPA TEMP MAP")
+plt.close(fig)
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -734,7 +738,7 @@ print("    FINISHED 700HPA TEMP MAP")
 #################################
 # BUILD 850HPA FLOW MAP
 #################################
-fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 # slice data
 plev850 = np.where(pres_levs == 850)[0][0]
@@ -799,6 +803,7 @@ figure_builder(fig, ax,
     save_path=composite_filename)
 
 print("    FINISHED 850HPA FLOW MAP")
+plt.close(fig)
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 ############################################################################################################################################################################.
@@ -818,7 +823,7 @@ print("    FINISHED 850HPA FLOW MAP")
 #################################
 # BUILD 850HPA TEMP MAP
 #################################
-fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=False, state_color='navy', border_color='navy', border_factor=1.5)
 
 # plot 850 hpa heights
 contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
@@ -879,6 +884,7 @@ figure_builder(fig, ax,
     save_path=composite_filename)
 
 print("    FINISHED 850HPA TEMP MAP")
+plt.close(fig)
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -899,7 +905,7 @@ print("    FINISHED 850HPA TEMP MAP")
 # BUILD 850HPA TADV MAP
 #################################
 try:
-    fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+    fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=False, state_color='navy', border_color='navy', border_factor=1.5)
 
     # slice data
     plev850 = np.where(pres_levs == 850)[0][0]
@@ -977,10 +983,12 @@ try:
         save_path=composite_filename)
 
     print("    FINISHED 850HPA TEMP ADV MAP")
+    plt.close(fig)
 
 except TypeError as e:
     print("    ERROR ENCOUNTERED WHILE BUILDING 850HPA TEMP ADV MAP. SKIPPING....")
     pass
+
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -1000,7 +1008,7 @@ except TypeError as e:
 #################################
 # SURFACE TEMPERATURE MAP
 #################################
-fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=False, state_color='navy', border_color='navy', border_factor=1.5)
 
 
 # plot mslp
@@ -1061,6 +1069,8 @@ figure_builder(fig, ax,
     save_path=composite_filename)
 
 print("    FINISHED SFC TEMP MAP")
+
+plt.close(fig)
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -1075,7 +1085,7 @@ print("    FINISHED SFC TEMP MAP")
 #################################
 # SURFACE DEWPOINT MAP
 #################################
-fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=False, state_color='navy', border_color='navy', border_factor=1.5)
 
 
 # plot mslp
@@ -1141,6 +1151,8 @@ figure_builder(fig, ax,
     save_path=composite_filename)
 
 print("    FINISHED SFC DWPT MAP")
+
+plt.close(fig)
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -1158,7 +1170,7 @@ print("    FINISHED SFC DWPT MAP")
 #################################
 # SURFACE CAPE MAP
 #################################
-fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
+fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=False, state_color='navy', border_color='navy', border_factor=1.5)
 
 
 # plot mslp
@@ -1242,6 +1254,8 @@ figure_builder(fig, ax,
     save_path=composite_filename)
 
 print("    FINISHED SFC CAPE MAP")
+
+plt.close(fig)
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -1258,7 +1272,7 @@ print("    FINISHED SFC CAPE MAP")
 #################################
 # SURFACE OBS MAP
 #################################
-fig, ax = map_builder(projection=projection, extent=[-118, -74, 24, 52], terrain=True, terrain_zoom=6, state_color='white', border_color='white')
+fig, ax = map_builder(projection=projection, extent=[-118, -74, 24, 52], terrain=True, state_color='white', border_color='white')
 
 
 try:
@@ -1298,11 +1312,11 @@ pm = ax.pcolormesh(radar_lon+0.05, radar_lat+0.05, radar_data,
 texts, params, geoms, valid_time = plot_bulletin(ax)
 
 
-# plot sat
-ax.imshow(xrds_sat["CMI"].values, origin="upper", extent=sat_extent, transform=sat_crs,
-        cmap="gray", norm=PowerNorm(gamma=0.55, vmin=0.0, vmax=1.1), interpolation="nearest",
-        regrid_shape=700, alpha=0.90, zorder=1)
-xrds_sat.close()
+# # plot sat
+# ax.imshow(xrds_sat["CMI"].values, origin="upper", extent=sat_extent, transform=sat_crs,
+#         cmap="gray", norm=PowerNorm(gamma=0.55, vmin=0.0, vmax=1.1), interpolation="nearest",
+#         regrid_shape=700, alpha=0.90, zorder=1)
+# xrds_sat.close()
 
 
 
@@ -1341,15 +1355,17 @@ composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conu
 
 figure_builder(fig, ax,
     title=f"RAP Analysis • Surface",
-    subtitle=F'RAP MSLP (hPa), Surface Observations, WPC Fronts, MRMS Reflectivity Mosaic (dBz), GOES19 Band 02 Visible',
+    subtitle=F'RAP MSLP (hPa), Surface Observations, WPC Fronts, MRMS Reflectivity Mosaic (dBz)',
     valid=f"Valid • {valid_date[0:10]} {valid_date[11:-13]}z",
     mappable=pm,
     cbar_title="Reflectivity",
     cbar_units="dBz",
     cbar_ticks=np.arange(-15, 95, 5),
-    footer_left=f"RAP 13km  •  INIT {valid_date[0:10]} {valid_date[11:-13]}z  •  {metar_time[11:16]}z METARs, {valid_time}z WPC Fronts, {str(radar_time)[11:16]}z Reflectivity Mosaic, {sat_time_str} {sat_type}",
+    footer_left=f"RAP 13km  •  INIT {valid_date[0:10]} {valid_date[11:-13]}z  •  {metar_time[11:16]}z METARs, {valid_time}z WPC Fronts, {str(radar_time)[11:16]}z Reflectivity Mosaic",
     save_path=composite_filename)
 
+#{sat_time_str} {sat_type}, GOES19 Band 02 Visible
+plt.close(fig)
 print("    FINISHED SFC ANL MAP")
 #############################################################################################################################################################################
 #############################################################################################################################################################################

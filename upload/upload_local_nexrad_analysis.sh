@@ -8,10 +8,10 @@ STAGE_DIR="staged_figures/local_nexrad_analysis"
 TYPE="local_nexrad_analysis"
 BASE_URL="https://weather.atmos.und.edu"
 
-# Build new local NEXRAD analysis
-echo "Building local NEXRAD analysis..."
+rm -f "$STAGE_DIR"/local_nexrad_analysis_*.png
+
 python "$BUILD_SCRIPT"
-echo "Local NEXRAD build finished."
+
 
 # Find newest generated image
 FILE=$(ls -1 "$STAGE_DIR"/local_nexrad_analysis_*.png | sort | tail -1)

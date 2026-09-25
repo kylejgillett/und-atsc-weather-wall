@@ -10,83 +10,45 @@ st = comp_time.time()
 
 import warnings
 warnings.filterwarnings("ignore")
-
 import os
 import sys
 from datetime import datetime, timezone
-
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 
 
 # get script dir
 script_dir = os.path.dirname(os.path.abspath(__file__))
-
 # get the parent dir
 project_root = os.path.abspath(os.path.join(script_dir, ".."))
-
 if project_root not in sys.path:
     sys.path.append(project_root)
-
 # import modules from sub dirs
 from utils.utils import *
 from utils.map import map_builder
 from utils.figure import figure_builder
-from get_data.get_outlooks import (
-    get_spc_convective_outlook,
-    get_spc_fire_outlook,
-    get_wpc_excessive_rainfall_outlook,
-    get_cpc_610_temperature_outlook,
-    get_cpc_610_precipitation_outlook,
-    get_wpc_winter_storm_outlook,
-    get_nhc_7day_tropical_outlook,
-    get_us_drought_monitor,
-)
+from get_data.get_outlooks import *
 
 
 now_utc = datetime.now(timezone.utc)
 
 CONUS_EXTENT = [-119, -74, 23.5, 53.5]
 TROPICAL_EXTENT = [-140, -10, 5, 47]
+#TROPICAL_PROJECTION = ccrs.Mercator(central_longitude=-75, min_latitude=0, max_latitude=55)
 OUTPUT_DIR = "staged_figures/conus_outlooks/"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
-# -----------------------------------------------------------------------------
-# PLOT COLORS / LEGENDS
-# -----------------------------------------------------------------------------
-SPC_COLORS = {
-    2: "#C1E9C1",  # TSTM
-    3: "#66A366",  # MRGL
-    4: "#FFE066",  # SLGT
-    5: "#FFA366",  # ENH
-    6: "#E06666",  # MDT
-    8: "#EE99EE",  # HIGH
-}
+# legend and color info
+SPC_COLORS = {2: "#C1E9C1",  3: "#66A366",   4: "#FFE066",  5: "#FFA366",  6: "#E06666",  8: "#EE99EE"}
 SPC_DN = [2, 3, 4, 5, 6, 8]
 SPC_LABELS = ["TSTM", "MRGL", "SLGT", "ENH", "MDT", "HIGH"]
 
-FIRE_COLORS = {
-    ("wind_rh", 5): "#E69800",
-    ("wind_rh", 8): "#FF0000",
-    ("wind_rh", 10): "#E600A9",
-    ("dry_thunder", 5): "#732600",
-    ("dry_thunder", 8): "#B30000",
-}
-FIRE_LEGEND = [
-    ("#E69800", "ELV"),
-    ("#FF0000", "CRT"),
-    ("#E600A9", "EXT"),
-    ("#732600", "IsoDT"),
-    ("#B30000", "SctDT"),
-]
+FIRE_COLORS = {("wind_rh", 5): "#E69800", ("wind_rh", 8): "#FF0000", ("wind_rh", 10): "#E600A9", 
+               ("dry_thunder", 5): "#732600", ("dry_thunder", 8): "#B30000"}
+FIRE_LEGEND = [ ("#E69800", "ELV"),  ("#FF0000", "CRT"), ("#E600A9", "EXT"), ("#732600", "IsoDT"), ("#B30000", "SctDT")]
 
-ERO_COLORS = {
-    1: "#38A800",
-    2: "#FFFE00",
-    3: "#F50000",
-    4: "#FF69C5",
-}
+ERO_COLORS = {1: "#38A800", 2: "#FFFE00", 3: "#F50000", 4: "#FF69C5"}
 ERO_DN = [1, 2, 3, 4]
 ERO_LABELS = ["MGRL\n5%+", "SLGT\n15%+", "MDT\n40%+", "HIGHT\n70%+"]
 
@@ -105,8 +67,7 @@ CPC_TEMP_LEGEND = [
     (("Below", 60), "#389FDC", "Blw\n60%"),
     (("Below", 70), "#005DA1", "Blw\n70%"),
     (("Below", 80), "#2E216F", "Blw\n80%"),
-    (("Below", 90), "#221852", "Blw\n90%"),
-]
+    (("Below", 90), "#221852", "Blw\n90%")]
 
 CPC_PRCP_LEGEND = [
     (("Above", 90), "#285300", "Abv\n90%"),
@@ -123,51 +84,20 @@ CPC_PRCP_LEGEND = [
     (("Below", 60), "#9B5031", "Blw\n60%"),
     (("Below", 70), "#934639", "Blw\n70%"),
     (("Below", 80), "#804000", "Blw\n80%"),
-    (("Below", 90), "#4F2F2F", "Blw\n90%"),
-]
+    (("Below", 90), "#4F2F2F", "Blw\n90%")]
 
-WSO_COLORS = {
-    "10%": "#04BCCA",
-    "30%": "#F7FF03",
-    "50%": "#FF0000",
-    "80%": "#990099",
-}
+WSO_COLORS = {"10%": "#04BCCA", "30%": "#F7FF03", "50%": "#FF0000", "80%": "#990099"}
 WSO_LABELS = ["10-\n30%", "30-\n50%", "50-\n80%", "80%+"]
 
-NHC_COLORS = {
-    "low": "#FFFF00",
-    "medium": "#E69800",
-    "high": "#E60000",
-}
+NHC_COLORS = {"low": "#FFFF00", "medium": "#E69800", "high": "#E60000",}
+NHC_STORM_COLORS = {"D": "#FFFF00",  "S": "#00BFFF",  "H": "#FF0000",  "M": "#FF00FF",}
+NHC_STORM_LABELS = ["TD", "TS", "H", "MH"]
 
-NHC_STORM_COLORS = {
-    "D": "#FFFF00", 
-    "S": "#00BFFF", 
-    "H": "#FF0000", 
-    "M": "#FF00FF",
-}
+DROUGHT_COLORS = {0: "#FFFF00", 1: "#FCD37F", 2: "#FFAA00", 3: "#E60000", 4: "#730000"}
+DROUGHT_LABELS = ["D0\nDRY", "D1\nMDT", "D2\nSVR", "D3\nEXT", "D4\nEXC"]
 
-NHC_STORM_LABELS = [
-    "TD",
-    "TS",
-    "H",
-    "MH",
-]
 
-DROUGHT_COLORS = {
-    0: "#FFFF00",
-    1: "#FCD37F",
-    2: "#FFAA00",
-    3: "#E60000",
-    4: "#730000",
-}
-DROUGHT_LABELS = [
-    "D0\nDRY",
-    "D1\nMDT",
-    "D2\nSVR",
-    "D3\nEXT",
-    "D4\nEXC",
-]
+
 
 
 #############################################################################################################################################################################
@@ -186,26 +116,15 @@ if outlook is not None:
         if data.empty:
             continue
 
-        ax.add_geometries(
-            data.geometry,
-            crs=ccrs.PlateCarree(),
-            facecolor=SPC_COLORS[dn],
-            edgecolor="black",
-            linewidth=1.0,
-            alpha=0.35 if dn == 2 else 0.75,
-            zorder=6,
-        )
+        ax.add_geometries(data.geometry, crs=ccrs.PlateCarree(), facecolor=SPC_COLORS[dn], edgecolor="black", 
+                          linewidth=1.0, alpha=0.35 if dn == 2 else 0.75, zorder=6)
 
     issue_time = outlook.attrs.get("issue_time") or now_utc
     valid_start = outlook.attrs.get("valid_start")
     valid_end = outlook.attrs.get("valid_end")
 
     if valid_start is not None and valid_end is not None:
-        valid_text = (
-            f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  '
-            f'Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - '
-            f'{valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
-        )
+        valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - {valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
     else:
         valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}'
 
@@ -225,6 +144,7 @@ if outlook is not None:
     print("    FINISHED SPC DAY 1 CONVECTIVE OUTLOOK")
 else:
     print("    SKIPPING SPC DAY 1 CONVECTIVE OUTLOOK")
+    
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -247,26 +167,14 @@ if outlook is not None:
         if data.empty:
             continue
 
-        ax.add_geometries(
-            data.geometry,
-            crs=ccrs.PlateCarree(),
-            facecolor=SPC_COLORS[dn],
-            edgecolor="black",
-            linewidth=1.0,
-            alpha=0.35 if dn == 2 else 0.75,
-            zorder=6,
-        )
+        ax.add_geometries(data.geometry, crs=ccrs.PlateCarree(), facecolor=SPC_COLORS[dn], edgecolor="black", linewidth=1.0, alpha=0.35 if dn == 2 else 0.75, zorder=6)
 
     issue_time = outlook.attrs.get("issue_time") or now_utc
     valid_start = outlook.attrs.get("valid_start")
     valid_end = outlook.attrs.get("valid_end")
 
     if valid_start is not None and valid_end is not None:
-        valid_text = (
-            f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  '
-            f'Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - '
-            f'{valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
-        )
+        valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - {valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
     else:
         valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}'
 
@@ -308,26 +216,14 @@ if outlook is not None:
         if data.empty:
             continue
 
-        ax.add_geometries(
-            data.geometry,
-            crs=ccrs.PlateCarree(),
-            facecolor=SPC_COLORS[dn],
-            edgecolor="black",
-            linewidth=1.0,
-            alpha=0.35 if dn == 2 else 0.75,
-            zorder=6,
-        )
+        ax.add_geometries(data.geometry, crs=ccrs.PlateCarree(), facecolor=SPC_COLORS[dn], edgecolor="black", linewidth=1.0, alpha=0.35 if dn == 2 else 0.75, zorder=6)
 
     issue_time = outlook.attrs.get("issue_time") or now_utc
     valid_start = outlook.attrs.get("valid_start")
     valid_end = outlook.attrs.get("valid_end")
 
     if valid_start is not None and valid_end is not None:
-        valid_text = (
-            f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  '
-            f'Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - '
-            f'{valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
-        )
+        valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - {valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
     else:
         valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}'
 
@@ -364,37 +260,20 @@ outlook = get_spc_fire_outlook(day=1)
 if outlook is not None:
     fig, ax = map_builder(extent=CONUS_EXTENT, terrain=True, counties=True, county_alpha=0.9)
 
-    for risk_type, dn in [
-        ("wind_rh", 5),
-        ("wind_rh", 8),
-        ("wind_rh", 10),
-        ("dry_thunder", 5),
-        ("dry_thunder", 8),
-    ]:
+    for risk_type, dn in [("wind_rh", 5), ("wind_rh", 8), ("wind_rh", 10), ("dry_thunder", 5), ("dry_thunder", 8)]:
         data = outlook[(outlook["risk_type"] == risk_type) & (outlook["dn"] == dn)]
         if data.empty:
             continue
 
-        ax.add_geometries(
-            data.geometry,
-            crs=ccrs.PlateCarree(),
-            facecolor=FIRE_COLORS[(risk_type, dn)],
-            edgecolor="black",
-            linewidth=1.0,
-            alpha=0.70,
-            zorder=6 if risk_type == "wind_rh" else 7,
-        )
+        ax.add_geometries(data.geometry, crs=ccrs.PlateCarree(), facecolor=FIRE_COLORS[(risk_type, dn)],
+                           edgecolor="black", linewidth=1.0, alpha=0.70, zorder=6 if risk_type == "wind_rh" else 7)
 
     issue_time = outlook.attrs.get("issue_time") or now_utc
     valid_start = outlook.attrs.get("valid_start")
     valid_end = outlook.attrs.get("valid_end")
 
     if valid_start is not None and valid_end is not None:
-        valid_text = (
-            f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  '
-            f'Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - '
-            f'{valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
-        )
+        valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - {valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
     else:
         valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}'
 
@@ -431,37 +310,20 @@ outlook = get_spc_fire_outlook(day=2)
 if outlook is not None:
     fig, ax = map_builder(extent=CONUS_EXTENT, terrain=True, counties=True, county_alpha=0.9)
 
-    for risk_type, dn in [
-        ("wind_rh", 5),
-        ("wind_rh", 8),
-        ("wind_rh", 10),
-        ("dry_thunder", 5),
-        ("dry_thunder", 8),
-    ]:
+    for risk_type, dn in [("wind_rh", 5), ("wind_rh", 8), ("wind_rh", 10), ("dry_thunder", 5), ("dry_thunder", 8)]:
         data = outlook[(outlook["risk_type"] == risk_type) & (outlook["dn"] == dn)]
         if data.empty:
             continue
 
-        ax.add_geometries(
-            data.geometry,
-            crs=ccrs.PlateCarree(),
-            facecolor=FIRE_COLORS[(risk_type, dn)],
-            edgecolor="black",
-            linewidth=1.0,
-            alpha=0.70,
-            zorder=6 if risk_type == "wind_rh" else 7,
-        )
+        ax.add_geometries(data.geometry, crs=ccrs.PlateCarree(), facecolor=FIRE_COLORS[(risk_type, dn)],
+                           edgecolor="black", linewidth=1.0, alpha=0.70, zorder=6 if risk_type == "wind_rh" else 7)
 
     issue_time = outlook.attrs.get("issue_time") or now_utc
     valid_start = outlook.attrs.get("valid_start")
     valid_end = outlook.attrs.get("valid_end")
 
     if valid_start is not None and valid_end is not None:
-        valid_text = (
-            f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  '
-            f'Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - '
-            f'{valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
-        )
+        valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - {valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
     else:
         valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}'
 
@@ -503,26 +365,14 @@ if outlook is not None:
         if data.empty:
             continue
 
-        ax.add_geometries(
-            data.geometry,
-            crs=ccrs.PlateCarree(),
-            facecolor=ERO_COLORS[dn],
-            edgecolor="black",
-            linewidth=1.0,
-            alpha=0.75,
-            zorder=6,
-        )
+        ax.add_geometries(data.geometry, crs=ccrs.PlateCarree(), facecolor=ERO_COLORS[dn], edgecolor="black", linewidth=1.0, alpha=0.75, zorder=6)
 
     issue_time = outlook.attrs.get("issue_time") or now_utc
     valid_start = outlook.attrs.get("valid_start")
     valid_end = outlook.attrs.get("valid_end")
 
     if valid_start is not None and valid_end is not None:
-        valid_text = (
-            f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  '
-            f'Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - '
-            f'{valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
-        )
+        valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - {valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
     else:
         valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}'
 
@@ -564,26 +414,14 @@ if outlook is not None:
         if data.empty:
             continue
 
-        ax.add_geometries(
-            data.geometry,
-            crs=ccrs.PlateCarree(),
-            facecolor=ERO_COLORS[dn],
-            edgecolor="black",
-            linewidth=1.0,
-            alpha=0.75,
-            zorder=6,
-        )
+        ax.add_geometries(data.geometry, crs=ccrs.PlateCarree(), facecolor=ERO_COLORS[dn], edgecolor="black", linewidth=1.0, alpha=0.75, zorder=6)
 
     issue_time = outlook.attrs.get("issue_time") or now_utc
     valid_start = outlook.attrs.get("valid_start")
     valid_end = outlook.attrs.get("valid_end")
 
     if valid_start is not None and valid_end is not None:
-        valid_text = (
-            f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  '
-            f'Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - '
-            f'{valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
-        )
+        valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - {valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
     else:
         valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}'
 
@@ -609,6 +447,9 @@ else:
 
 
 
+
+
+
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -625,26 +466,15 @@ if outlook is not None:
         if data.empty:
             continue
 
-        ax.add_geometries(
-            data.geometry,
-            crs=ccrs.PlateCarree(),
-            facecolor=ERO_COLORS[dn],
-            edgecolor="black",
-            linewidth=1.0,
-            alpha=0.75,
-            zorder=6,
-        )
+        ax.add_geometries(data.geometry, crs=ccrs.PlateCarree(), facecolor=ERO_COLORS[dn],
+                           edgecolor="black", linewidth=1.0, alpha=0.75, zorder=6)
 
     issue_time = outlook.attrs.get("issue_time") or now_utc
     valid_start = outlook.attrs.get("valid_start")
     valid_end = outlook.attrs.get("valid_end")
 
     if valid_start is not None and valid_end is not None:
-        valid_text = (
-            f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  '
-            f'Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - '
-            f'{valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
-        )
+        valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}  •  Valid: {valid_start.strftime("%H%MZ %a %b %d").upper()} - {valid_end.strftime("%H%MZ %a %b %d, %Y").upper()}'
     else:
         valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}'
 
@@ -670,6 +500,10 @@ else:
 
 
 
+
+
+
+
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -682,41 +516,27 @@ if outlook is not None:
     fig, ax = map_builder(extent=CONUS_EXTENT, terrain=True, counties=True, county_alpha=0.9)
 
     for (cat, prob), color, label in CPC_TEMP_LEGEND:
-        data = outlook[
-            (outlook["cat"].astype(str).str.lower() == cat.lower()) &
-            (outlook["prob"].astype(float).round().astype(int) == prob)
-        ]
+        data = outlook[(outlook["cat"].astype(str).str.lower() == cat.lower()) & (outlook["prob"].astype(float).round().astype(int) == prob)]
 
         if data.empty:
             continue
 
-        ax.add_geometries(
-            data.geometry,
-            crs=ccrs.PlateCarree(),
-            facecolor=color,
-            edgecolor="#777777",
-            linewidth=0.7,
-            alpha=0.76,
-            zorder=6,
-        )
+        ax.add_geometries(data.geometry, crs=ccrs.PlateCarree(), facecolor=color,
+                           edgecolor="#777777", linewidth=0.7, alpha=0.76, zorder=6)
 
     issue_time = outlook.attrs.get("issue_time") or now_utc
     valid_start = outlook.attrs.get("valid_start")
     valid_end = outlook.attrs.get("valid_end")
 
     if valid_start is not None and valid_end is not None:
-        valid_text = (
-            f'Issued: {issue_time.strftime("%a %b %d, %Y").upper()}  •  '
-            f'Valid: {valid_start.strftime("%a %b %d").upper()} - '
-            f'{valid_end.strftime("%a %b %d, %Y").upper()}'
-        )
+        valid_text = f'Issued: {issue_time.strftime("%a %b %d, %Y").upper()}  •  Valid: {valid_start.strftime("%a %b %d").upper()} - {valid_end.strftime("%a %b %d, %Y").upper()}'
     else:
         valid_text = f'Issued: {issue_time.strftime("%a %b %d, %Y").upper()}'
 
     outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="08-cpc-610-temp")
 
     figure_builder(fig, ax,
-        title="6–10 Day Temperature Outlook",
+        title="6-10 Day Temperature Outlook",
         subtitle="NOAA Climate Prediction Center",
         valid=valid_text,
         category_colors=[item[1] for item in CPC_TEMP_LEGEND],
@@ -735,6 +555,10 @@ else:
 
 
 
+
+
+
+
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -747,41 +571,27 @@ if outlook is not None:
     fig, ax = map_builder(extent=CONUS_EXTENT, terrain=True, counties=True, county_alpha=0.9)
 
     for (cat, prob), color, label in CPC_PRCP_LEGEND:
-        data = outlook[
-            (outlook["cat"].astype(str).str.lower() == cat.lower()) &
-            (outlook["prob"].astype(float).round().astype(int) == prob)
-        ]
+        data = outlook[(outlook["cat"].astype(str).str.lower() == cat.lower()) & (outlook["prob"].astype(float).round().astype(int) == prob)]
 
         if data.empty:
             continue
 
-        ax.add_geometries(
-            data.geometry,
-            crs=ccrs.PlateCarree(),
-            facecolor=color,
-            edgecolor="#777777",
-            linewidth=0.7,
-            alpha=0.76,
-            zorder=6,
-        )
+        ax.add_geometries(data.geometry, crs=ccrs.PlateCarree(),
+                           facecolor=color, edgecolor="#777777", linewidth=0.7, alpha=0.76, zorder=6)
 
     issue_time = outlook.attrs.get("issue_time") or now_utc
     valid_start = outlook.attrs.get("valid_start")
     valid_end = outlook.attrs.get("valid_end")
 
     if valid_start is not None and valid_end is not None:
-        valid_text = (
-            f'Issued: {issue_time.strftime("%a %b %d, %Y").upper()}  •  '
-            f'Valid: {valid_start.strftime("%a %b %d").upper()} - '
-            f'{valid_end.strftime("%a %b %d, %Y").upper()}'
-        )
+        valid_text = f'Issued: {issue_time.strftime("%a %b %d, %Y").upper()}  •  Valid: {valid_start.strftime("%a %b %d").upper()} - {valid_end.strftime("%a %b %d, %Y").upper()}'
     else:
         valid_text = f'Issued: {issue_time.strftime("%a %b %d, %Y").upper()}'
 
     outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="09-cpc-610-precip")
 
     figure_builder(fig, ax,
-        title="6–10 Day Precipitation Outlook",
+        title="6-10 Day Precipitation Outlook",
         subtitle="NOAA Climate Prediction Center",
         valid=valid_text,
         category_colors=[item[1] for item in CPC_PRCP_LEGEND],
@@ -800,6 +610,11 @@ else:
 
 
 
+
+
+
+
+
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -809,13 +624,7 @@ else:
 outlook = get_nhc_7day_tropical_outlook()
 
 if outlook is not None:
-    fig, ax = map_builder(
-        extent=TROPICAL_EXTENT,
-        terrain=True,
-        terrain_zoom=3,
-        counties=False,
-        map_scale="50m",
-    )
+    fig, ax = map_builder(extent=TROPICAL_EXTENT, terrain=True, terrain_zoom=3, counties=False, map_scale="50m")
 
     regions = outlook.get("regions")
     motion = outlook.get("motion")
@@ -825,32 +634,16 @@ if outlook is not None:
     storm_track = outlook.get("storm_track")
     storm_points = outlook.get("storm_points")
 
-    # -------------------------------------------------------------------------
-    # ACTIVE TROPICAL CYCLONES
-    # Draw these first so the GTWO disturbance areas remain easy to see.
-    # -------------------------------------------------------------------------
+    # active storms 
     if storm_cone is not None:
         for _, row in storm_cone.iterrows():
-            ax.add_geometries(
-                [row.geometry],
-                crs=ccrs.PlateCarree(),
-                facecolor="#E8E8E8",
-                edgecolor="#202020",
-                linewidth=1.2,
-                alpha=0.35,
-                zorder=4,
-            )
+            ax.add_geometries([row.geometry], crs=ccrs.PlateCarree(), facecolor="#E8E8E8",
+                               edgecolor="#202020", linewidth=1.2, alpha=0.35, zorder=4)
 
     if storm_track is not None:
         for _, row in storm_track.iterrows():
-            ax.add_geometries(
-                [row.geometry],
-                crs=ccrs.PlateCarree(),
-                facecolor="none",
-                edgecolor="black",
-                linewidth=2.0,
-                zorder=8,
-            )
+            ax.add_geometries([row.geometry], crs=ccrs.PlateCarree(), facecolor="none",
+                               edgecolor="black", linewidth=2.0, zorder=8)
 
     if storm_points is not None:
         for _, row in storm_points.iterrows():
@@ -862,21 +655,11 @@ if outlook is not None:
             storm_type = str(row.get("dvlbl", "")).strip().upper()
             storm_color = NHC_STORM_COLORS.get(storm_type, "#FFFFFF")
 
-            # Forecast positions
-            ax.scatter(
-                row.geometry.x,
-                row.geometry.y,
-                s=24 if forecast_hour != 0 else 95,
-                marker="o",
-                c=storm_color,
-                edgecolors="black",
-                linewidths=0.8 if forecast_hour != 0 else 1.4,
-                transform=ccrs.PlateCarree(),
-                zorder=10 if forecast_hour != 0 else 12,
-                clip_on=True
-            )
+            # fcst locations
+            ax.scatter(row.geometry.x, row.geometry.y, s=24 if forecast_hour != 0 else 95, marker="o", c=storm_color, edgecolors="black",
+                        linewidths=0.8 if forecast_hour != 0 else 1.4, transform=ccrs.PlateCarree(), zorder=10 if forecast_hour != 0 else 12, clip_on=True)
 
-            # Label only the current storm position.
+            # label only current storm
             if forecast_hour == 0:
                 storm_name = str(row.get("stormname", "")).strip().upper()
 
@@ -886,21 +669,10 @@ if outlook is not None:
                 except Exception:
                     storm_label = storm_name
 
-                ax.text(
-                    row.geometry.x + 0.8,
-                    row.geometry.y + 0.5,
-                    storm_label,
-                    fontsize=10,
-                    fontweight="bold",
-                    color="black",
-                    transform=ccrs.PlateCarree(),
-                    zorder=13,
-                    clip_on=True
-                )
+                ax.text(row.geometry.x + 0.8, row.geometry.y + 0.5, storm_label, fontsize=10, 
+                        fontweight="bold", color="black", transform=ccrs.PlateCarree(), zorder=15, clip_on=True)
 
-    # -------------------------------------------------------------------------
-    # 7-DAY GRAPHICAL TROPICAL WEATHER OUTLOOK
-    # -------------------------------------------------------------------------
+    # 7 day outlook
     if regions is not None:
         for _, row in regions.iterrows():
             try:
@@ -915,16 +687,8 @@ if outlook is not None:
             else:
                 color = NHC_COLORS["high"]
 
-            ax.add_geometries(
-                [row.geometry],
-                crs=ccrs.PlateCarree(),
-                facecolor=color,
-                edgecolor=color,
-                linewidth=1.5,
-                alpha=0.28,
-                hatch="///",
-                zorder=5,
-            )
+            ax.add_geometries([row.geometry], crs=ccrs.PlateCarree(), facecolor=color, 
+                              edgecolor=color, linewidth=1.5, alpha=0.28, hatch="///", zorder=5)
 
     if motion is not None:
         for _, row in motion.iterrows():
@@ -940,14 +704,8 @@ if outlook is not None:
             else:
                 color = NHC_COLORS["high"]
 
-            ax.add_geometries(
-                [row.geometry],
-                crs=ccrs.PlateCarree(),
-                facecolor="none",
-                edgecolor=color,
-                linewidth=2.5,
-                zorder=7,
-            )
+            ax.add_geometries([row.geometry], crs=ccrs.PlateCarree(), 
+                              facecolor="none", edgecolor=color, linewidth=2.5, zorder=7)
 
     if points is not None:
         for _, row in points.iterrows():
@@ -967,7 +725,7 @@ if outlook is not None:
                        linewidths=1.0, transform=ccrs.PlateCarree(), zorder=9, clip_on=True)
 
             ax.text(row.geometry.x + 0.7, row.geometry.y + 0.4, f'{row["prob7day"]}', fontsize=10, 
-                    fontweight="bold", color="black", transform=ccrs.PlateCarree(), zorder=10, clip_on=True)
+                    fontweight="bold", color="black", transform=ccrs.PlateCarree(), zorder=15, clip_on=True)
 
 
     issue_time = outlook.get("issue_time") or now_utc
@@ -987,14 +745,7 @@ if outlook is not None:
             NHC_STORM_COLORS["S"],
             NHC_STORM_COLORS["H"],
             NHC_STORM_COLORS["M"]],
-        category_labels=[
-            "LOW\n≤30%",
-            "MED\n40-60%",
-            "HIGH\n≥70%",
-            "TD",
-            "TS",
-            "HR",
-            "MHR",],
+        category_labels=["LOW\n≤30%", "MED\n40-60%", "HIGH\n≥70%", "TD", "TS", "HUR", "MHUR"],
         category_title=None,
         footer_left="NOAA National Hurricane Center • https://www.nhc.noaa.gov/gtwo.php",
         save_path=outlook_filename)
@@ -1003,6 +754,17 @@ if outlook is not None:
     print("    FINISHED NHC 7-DAY TROPICAL WEATHER OUTLOOK")
 else:
     print("    SKIPPING NHC 7-DAY TROPICAL WEATHER OUTLOOK")
+
+
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+
+
+
+
+
+
 
 
 
@@ -1019,21 +781,13 @@ outlook = get_us_drought_monitor()
 if outlook is not None:
     fig, ax = map_builder(extent=CONUS_EXTENT, terrain=True, counties=True, county_alpha=0.9)
 
-    # Plot lowest category first so the more severe categories remain visible.
     for drought_category in [0, 1, 2, 3, 4]:
         data = outlook[outlook["DM"] == drought_category]
         if data.empty:
             continue
 
-        ax.add_geometries(
-            data.geometry,
-            crs=ccrs.PlateCarree(),
-            facecolor=DROUGHT_COLORS[drought_category],
-            edgecolor="black",
-            linewidth=0.45,
-            alpha=0.55,
-            zorder=5 + drought_category,
-        )
+        ax.add_geometries(data.geometry, crs=ccrs.PlateCarree(), facecolor=DROUGHT_COLORS[drought_category], edgecolor="black",
+                           linewidth=0.45, alpha=0.55, zorder=5 + drought_category)
 
     issue_time = outlook.attrs.get("issue_time") or now_utc
     valid_start = outlook.attrs.get("valid_start")
