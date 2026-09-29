@@ -115,7 +115,7 @@ for fh, valid_time, raw_data in hrrr_forecast(center_lat=center_lat, center_lon=
 
     cf = ax.contourf(lon, lat, cloud_masked, levels=[20, 35, 50, 65, 80, 90, 100], cmap=cloud_cmap, alpha=0.3, transform=ccrs.PlateCarree(), zorder=1.15)
         
-    cs = ax.contour(lon, lat, mslp/100, np.arange(904, 1054, 4), colors='black',
+    cs = ax.contour(lon, lat, mslp/100, np.arange(904, 1054, 2), colors='black',
                     linewidths=2.0, linestyles='-',
                     transform=ccrs.PlateCarree(), zorder=11)
     plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',

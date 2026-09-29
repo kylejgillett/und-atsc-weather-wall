@@ -198,7 +198,7 @@ except:
 ###################################################################
 # RAP MSLP
 ###################################################################
-cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
+cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 2), colors='black',
                 linewidths=2.0, linestyles='-',
                 transform=ccrs.PlateCarree(), zorder=11)
 plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
