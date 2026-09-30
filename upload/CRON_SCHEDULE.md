@@ -22,7 +22,7 @@ Logs are found at:
 | Time | Schedule | Scripts |
 |---|---|---|
 | `:00` | Every 15 minutes | `upload_local_nexrad_analysis.sh` + `upload_regional_rap_analysis.sh` |
-| `:04` | 04, 10, 16, 22 UTC | `upload_gfs_forecasts.sh` |
+| `:04` | 03, 09, 15, 21 UTC | `upload_gfs_forecasts.sh` |
 | `:15` | Every 15 minutes | `upload_local_nexrad_analysis.sh` + `upload_regional_rap_analysis.sh` |
 | `:20` | 01, 13, 19 UTC | `upload_soundings_obs.sh` |
 | `:30` | Every 15 minutes | `upload_local_nexrad_analysis.sh` + `upload_regional_rap_analysis.sh` |
@@ -38,58 +38,33 @@ Logs are found at:
 
 ## Crontab
 
+    # ============================================================
+    # UND ATMOSPHERIC SCIENCES WEATHER WALL
+    # OPERATIONAL SCHEDULE
+    # ============================================================
+
     SHELL=/bin/bash
     CRON_TZ=UTC
 
-    REPO=/home/kjgill/weather_wall/und-atsc-weather-wall
-    LOGDIR=/home/kjgill/weather_wall/logs
+    REPO=/home/kyle.gillett/und-atsc-weather-wall
+    LOGDIR=/home/kyle.gillett/weather_wall_logs
 
 
-    # ------------------------------------------------------------
-    # NEXRAD + REGIONAL SURFACE BUNDLE
-    # Every 15 minutes
-    # ~3:15 total runtime
-    # ------------------------------------------------------------
-
+    # Local NEXRAD -> Regional RAP
     */15 * * * * $REPO/upload/run_job.sh upload_local_nexrad_analysis.sh upload_regional_rap_analysis.sh >> $LOGDIR/local_regional_analysis.log 2>&1
 
 
-    # ------------------------------------------------------------
-    # GFS FORECASTS
-    # 04, 10, 16, 22 UTC
-    # ~15 minute runtime
-    # ------------------------------------------------------------
-
-    4 4,10,16,22 * * * $REPO/upload/run_job.sh upload_gfs_forecasts.sh >> $LOGDIR/gfs_forecasts.log 2>&1
+    # GFS forecasts: 02:04, 08:04, 14:04, 20:04 UTC
+    4 3,9,15,21 * * * $REPO/upload/run_job.sh upload_gfs_forecasts.sh >> $LOGDIR/gfs_forecasts.log 2>&1
 
 
-    # ------------------------------------------------------------
-    # OBSERVED SOUNDINGS
-    # 01, 13, 19 UTC
-    # ~4-6 minute runtime
-    # ------------------------------------------------------------
-
+    # Observed soundings: 01:20, 13:20, 19:20 UTC
     20 1,13,19 * * * $REPO/upload/run_job.sh upload_soundings_obs.sh >> $LOGDIR/soundings_obs.log 2>&1
 
 
-    # ------------------------------------------------------------
-    # CONUS RAP + HRRR FORECAST + OUTLOOKS BUNDLE
-    #
-    # CONUS RAP  ~3:45
-    # HRRR       ~2:30
-    # Outlooks   ~2:40
-    # Total      ~8:55
-    # ------------------------------------------------------------
-
+    # CONUS RAP -> HRRR -> Outlooks
     34 * * * * $REPO/upload/run_job.sh upload_conus_rap_analysis.sh upload_hrrr_forecasts.sh upload_outlooks.sh >> $LOGDIR/hourly_forecasts.log 2>&1
 
 
-    # ------------------------------------------------------------
-    # ASOS + BUFKIT BUNDLE
-    #
-    # ASOS       ~0:35
-    # BUFKIT     ~0:40
-    # Total      ~1:15
-    # ------------------------------------------------------------
-
+    # ASOS -> BUFKIT
     50 * * * * $REPO/upload/run_job.sh upload_asos.sh upload_soundings_bufkit.sh >> $LOGDIR/asos_bufkit.log 2>&1

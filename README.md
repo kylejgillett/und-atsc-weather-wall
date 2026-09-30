@@ -16,7 +16,7 @@ Direct questions to Kyle Gillett (kyle.gillett@und.edu)
 | Time | Schedule | Scripts |
 |---|---|---|
 | `:00` | Every 15 minutes | NEXRAD Analysis, Regional RAP-surface analysis |
-| `:04` | 02, 08, 14, 20 UTC | GFS Forecast |
+| `:04` | 03, 09, 15, 21 UTC | GFS Forecast |
 | `:15` | Every 15 minutes | NEXRAD Analysis, Regional RAP-surface analysis |
 | `:20` | 01, 13, 19 UTC | Regional Observed Soundings |
 | `:30` | Every 15 minutes |NEXRAD Analysis, Regional RAP-surface analysis|
