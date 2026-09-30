@@ -104,16 +104,28 @@ hours = 96
 # get station data and build the plot
 now_utc = datetime.now(timezone.utc)
 
+built_stations = []
+failed_stations = []
+
 for id_num, station_id in enumerate(stations):
 
     if id_num > 0:
         comp_time.sleep(5)
 
     # get data
-    df = get_asos_obs(station_id, hours=hours)
+    try:
+        df = get_asos_obs(station_id, hours=hours, max_retries=4)
+
+    except RuntimeError as e:
+        print(f"    WARNING: SKIPPING {station_id}.....{e}")
+        failed_stations.append(station_id)
+        continue
+
     if df is None or len(df) == 0:
         print(f"    WARNING: NO DATA FOR {station_id}")
+        failed_stations.append(station_id)
         continue
+
     df = df.copy()
 
 
@@ -322,7 +334,21 @@ for id_num, station_id in enumerate(stations):
 
 
     plt.close(fig)
+    built_stations.append(station_id)
     print(f"    FINISHED {station_id} TIMESERIES")
+
+
+print()
+
+if built_stations:
+    print(f"    BUILT ASOS TIMESERIES: {', '.join(built_stations)}")
+
+if failed_stations:
+    print(f"    SKIPPED ASOS TIMESERIES: {', '.join(failed_stations)}")
+
+if not built_stations:
+    print("ERROR: NO ASOS TIMESERIES WERE BUILT")
+    sys.exit(1)
 
 elapsed_time = comp_time.time() - st
 
