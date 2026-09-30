@@ -271,5 +271,7 @@ figure_builder(fig, ax,
     footer_right=' ',
     save_path=composite_filename)
 
+plt.close()
+
 elapsed_time = comp_time.time() - st
 print(f"############\nSCRIPT FINISHED: time: {comp_time.strftime("%H:%M:%S", comp_time.gmtime(elapsed_time))}\n############")

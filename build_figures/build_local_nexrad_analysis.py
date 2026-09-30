@@ -156,6 +156,8 @@ figure_builder(fig, ax,
     footer_left=f"KMVX • {radar_scan_string}Z",
     save_path=nexrad_filename)
 
+plt.close()
+
 elapsed_time = comp_time.time() - st
 print(f"############\nSCRIPT FINISHED: time: {comp_time.strftime("%H:%M:%S", comp_time.gmtime(elapsed_time))}\n############")
 
