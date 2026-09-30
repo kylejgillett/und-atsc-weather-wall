@@ -52,29 +52,34 @@ cd "$REPO_DIR"
 # HEALTHCHECK
 # ============================================================
 
+HC_URL=""
+
 FIRST_JOB="$(basename "$1")"
+
 case "$FIRST_JOB" in
+
     upload_local_nexrad_analysis.sh)
         HC_URL="${HC_LOCAL_REGIONAL:-}"
         ;;
+
     upload_gfs_forecasts.sh)
         HC_URL="${HC_GFS:-}"
         ;;
+
     upload_soundings_obs.sh)
         HC_URL="${HC_SOUNDINGS_OBS:-}"
         ;;
+
     upload_conus_rap_analysis.sh)
         HC_URL="${HC_HOURLY_FORECASTS:-}"
         ;;
+
     upload_asos.sh)
         HC_URL="${HC_ASOS_BUFKIT:-}"
         ;;
-    *)
-        HC_URL=""
-        ;;
+
 esac
 
-# Remove trailing slash if one exists.
 HC_URL="${HC_URL%/}"
 
 
