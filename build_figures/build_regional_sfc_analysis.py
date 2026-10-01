@@ -172,7 +172,12 @@ ax.imshow(visible.values, origin="upper", extent=sat_extent, transform=sat_crs, 
           norm=PowerNorm(gamma=0.55, vmin=0.0, vmax=1.1), interpolation="nearest",
           regrid_shape=1200, alpha=0.85, zorder=1)
 xrds_sat.close()
-
+# remove temporary GOES file after use
+try:
+    os.remove(sat_file)
+    print(f"    GOES TEMP FILE REMOVED.....{os.path.basename(sat_file)}")
+except OSError as e:
+    print(f"    WARNING: Could not remove GOES temp file: {e}")
 
 ###################################################################
 # METAR STATION PLOTS
