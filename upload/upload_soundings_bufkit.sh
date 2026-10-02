@@ -56,4 +56,10 @@ for FILE in "$STAGE_DIR"/sounding_*_[0-9][0-9]-{anl,cmp}-*.png; do
 
 done
 
+
+# Clear old BUFKIT sounding graphics
+rm -f "$STAGE_DIR"/sounding_*_[0-9][0-9]-anl-*.png
+rm -f "$STAGE_DIR"/sounding_*_[0-9][0-9]-cmp-*.png
+
+
 #echo "BUFKIT sounding upload finished."

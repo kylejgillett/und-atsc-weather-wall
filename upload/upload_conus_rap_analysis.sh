@@ -41,4 +41,7 @@ for FILE in "$STAGE_DIR"/conus_analysis_*.png; do
 
 done
 
+# Clear old CONUS RAP graphics
+rm -f "$STAGE_DIR"/conus_analysis_*.png
+
 #echo "CONUS RAP analysis upload finished."

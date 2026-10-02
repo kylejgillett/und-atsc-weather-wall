@@ -56,4 +56,9 @@ for FILE in "$STAGE_DIR"/sounding_*_[0-9][0-9]-obs-*.png; do
 
 done
 
+
+# Clear old observed sounding graphics
+rm -f "$STAGE_DIR"/sounding_*_[0-9][0-9]-obs-*.png
+
+
 #echo "Observed sounding upload finished."

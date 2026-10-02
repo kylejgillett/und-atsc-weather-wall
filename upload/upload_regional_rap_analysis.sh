@@ -34,4 +34,7 @@ curl --location \
   --form "fileName=${FILENAME}" \
   --write-out "\n  + UPLOAD STATUS: http-%{http_code}\n"
 
+
+rm -f "$STAGE_DIR"/regional_rap_analysis_*.png
+
 #echo "Regional RAP analysis upload finished."

@@ -68,5 +68,8 @@ for FILE in "$STAGE_DIR"/gfs_*.png; do
 
 done
 
+# Clear old GFS graphics
+rm -f "$STAGE_DIR"/gfs_*.png
+
 #echo
 #echo "GFS upload finished."

@@ -36,5 +36,8 @@ curl --location \
   --form "fileName=${FILENAME}" \
   --write-out "\n  + UPLOAD STATUS: http-%{http_code}\n"
 
+
+rm -f "$STAGE_DIR"/local_nexrad_analysis_*.png
+
 #echo
 #echo "Local NEXRAD upload finished."

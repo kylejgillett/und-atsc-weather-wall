@@ -91,14 +91,26 @@ try:
     BARB_OUTLINE = [withStroke(linewidth=3.5, foreground="#1A1A18")]
 
     metar_obs, metar_time = get_metar_data(reduced_to=10)
-    filtered_metars = metar_obs[
-        (metar_obs['latitude'] >= center_lat - box_size*3) & (metar_obs['latitude'] <= center_lat + box_size*3) &
-        (metar_obs['longitude'] >= center_lon - box_size*3) & (metar_obs['longitude'] <= center_lon + box_size*3)]
-    filtered_metars['air_temperature'] = (filtered_metars['air_temperature']* 9/5) + 32
-    filtered_metars['dew_point_temperature'] = (filtered_metars['dew_point_temperature']* 9/5) + 32
-    bad_metar = (filtered_metars['air_temperature'] < -100) | (filtered_metars['dew_point_temperature'] < -100)
-    if bad_metar.any():
-        filtered_metars = filtered_metars[~bad_metar].reset_index(drop=True)
+    # copy before filtering
+    filtered_metars = metar_obs.copy()
+    # remove stations with invalid coordinates
+    filtered_metars = filtered_metars[np.isfinite(filtered_metars['latitude']) & np.isfinite(filtered_metars['longitude'])]
+    # keep only stations near the map domain
+    filtered_metars = filtered_metars[(filtered_metars['latitude'] >= center_lat - box_size*3) & (filtered_metars['latitude'] <= center_lat + box_size*3) &
+        (filtered_metars['longitude'] >= center_lon - box_size*3) & (filtered_metars['longitude'] <= center_lon + box_size*3)].copy()
+    # convert temperature / dewpoint to Fahrenheit
+    filtered_metars['air_temperature'] = (filtered_metars['air_temperature'] * 9/5) + 32
+    filtered_metars['dew_point_temperature'] = (filtered_metars['dew_point_temperature'] * 9/5) + 32
+    # remove obviously bad temperature observations
+    bad_metar = ((filtered_metars['air_temperature'] < -100) | (filtered_metars['air_temperature'] > 140) |
+        (filtered_metars['dew_point_temperature'] < -100) | (filtered_metars['dew_point_temperature'] > 100))
+    filtered_metars = filtered_metars[~bad_metar].reset_index(drop=True)
+    # remove stations that cannot be projected onto the map
+    xy = ax.projection.transform_points(ccrs.PlateCarree(), filtered_metars['longitude'].to_numpy(), filtered_metars['latitude'].to_numpy())
+    valid = np.isfinite(xy[:, 0]) & np.isfinite(xy[:, 1])
+    if (~valid).any():
+        print(f"    REMOVED {(~valid).sum()} METAR(S) WITH INVALID MAP COORDINATES")
+    filtered_metars = filtered_metars[valid].reset_index(drop=True)
 
     custom_layout = StationPlotLayout()
     custom_layout.add_barb('eastward_wind', 'northward_wind', units='knots', path_effects=BARB_OUTLINE)

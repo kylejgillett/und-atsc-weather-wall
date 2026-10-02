@@ -43,4 +43,6 @@ for FILE in $FILES; do
 
 done
 
+rm -f "$STAGE_DIR"/hrrr_forecast_*.png
+
 #echo "HRRR forecast upload finished."

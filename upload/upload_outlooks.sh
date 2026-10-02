@@ -44,6 +44,10 @@ for FILE in "$STAGE_DIR"/outlook_*_[0-9][0-9]-*.png; do
 
 done
 
+
+# Clear old outlook graphics
+rm -f "$STAGE_DIR"/outlook_*.png
+
 #echo "Outlook upload finished."
 
 

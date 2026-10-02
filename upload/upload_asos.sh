@@ -40,4 +40,7 @@ for FILE in "$STAGE_DIR"/asos_timeseries_*_[0-9][0-9]-*.png; do
 
 done
 
+# Clear old ASOS graphics
+rm -f "$STAGE_DIR"/asos_timeseries_*.png
+
 # echo "ASOS upload finished."
