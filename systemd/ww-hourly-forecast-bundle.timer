@@ -4,7 +4,7 @@ Description=Run Weather Wall Hourly Forecast Products
 [Timer]
 OnCalendar=*-*-* *:34:00 UTC
 AccuracySec=1s
-Unit=ww-hourly-forecasts-bundle.service
+Unit=ww-hourly-forecast-bundle.service
 
 [Install]
 WantedBy=timers.target
