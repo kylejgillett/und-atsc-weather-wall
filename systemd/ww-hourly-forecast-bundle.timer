@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Weather Wall Hourly Forecast Products
+
+[Timer]
+OnCalendar=*-*-* *:34:00 UTC
+AccuracySec=1s
+Unit=weatherwall-hourly-forecasts.service
+
+[Install]
+WantedBy=timers.target

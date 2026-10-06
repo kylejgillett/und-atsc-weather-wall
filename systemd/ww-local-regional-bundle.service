@@ -1,0 +1,9 @@
+[Unit]
+Description=Weather Wall Local NEXRAD and Regional RAP Analysis
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/und-atsc-weather-wall
+ExecStart=%h/und-atsc-weather-wall/upload/run_job.sh upload_local_nexrad_analysis.sh upload_regional_rap_analysis.sh
+StandardOutput=append:%h/weather_wall_logs/local_regional_analysis.log
+StandardError=append:%h/weather_wall_logs/local_regional_analysis.log
