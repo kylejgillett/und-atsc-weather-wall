@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Weather Wall ASOS and BUFKIT hourly
+
+[Timer]
+OnCalendar=*-*-* *:50:00 UTC
+AccuracySec=1s
+Unit=weatherwall-asos-bufkit.service
+
+[Install]
+WantedBy=timers.target

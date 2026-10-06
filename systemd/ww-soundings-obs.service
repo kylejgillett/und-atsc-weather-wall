@@ -1,0 +1,9 @@
+[Unit]
+Description=Weather Wall Observed Soundings
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/und-atsc-weather-wall
+ExecStart=%h/und-atsc-weather-wall/upload/run_job.sh upload_soundings_obs.sh
+StandardOutput=append:%h/weather_wall_logs/soundings_obs.log
+StandardError=append:%h/weather_wall_logs/soundings_obs.log

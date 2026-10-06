@@ -28,8 +28,11 @@ def gfs_forecast(center_lat=37.86, center_lon=-98.61, box_size=20, forecast_hour
     
     try:
         cat = TDSCatalog(url)
-    except Exception as e:
-        sys.exit(f"NCSS URL FAILED -- GFS data may not be available at this time. Error: {e}")
+    except:
+        try:
+            cat = TDSCatalog("https://tds.scigw.unidata.ucar.edu/thredds/catalog/grib/NCEP/GFS/Global_0p25deg/latest.xml")
+        except Exception as e:
+            sys.exit(f"NCSS URL FAILED -- GFS data may not be available at this time. Error: {e}")
     
     # Get latest GFS dataset
     latest_ds = list(cat.datasets.values())[0]

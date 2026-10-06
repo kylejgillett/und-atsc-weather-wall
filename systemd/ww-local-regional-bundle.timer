@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Weather Wall Local/Regional Analysis every 15 minutes
+
+[Timer]
+OnCalendar=*-*-* *:00,15,30,45:00 UTC
+AccuracySec=1s
+Unit=weatherwall-local-regional.service
+
+[Install]
+WantedBy=timers.target
