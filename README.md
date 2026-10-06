@@ -23,3 +23,18 @@ Direct questions to Kyle Gillett (kyle.gillett@und.edu)
 | `:34` | Every hour | CONUS RAP analysis, HRRR forecasts, NOAA Outlooks |
 | `:45` | Every 15 minutes | NEXRAD Analysis, Regional RAP-surface analysis |
 | `:50` | Every hour | Regional ASOS, BUFKIT analysis soundings |
+
+<br>
+<br>
+
+## Production Deployment
+
+The production Weather Wall VM tracks the `weatherwall-vm` branch. Development is generally performed on `master`. Changes intended for production are selectively merged or copied into `weatherwall-vm`.
+
+On the production VM:
+
+```bash
+cd ~/und-atsc-weather-wall
+git pull --ff-only origin weatherwall-vm
+./systemd/install.sh
+systemctl --user daemon-reload
