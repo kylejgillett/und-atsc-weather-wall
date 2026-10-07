@@ -28,7 +28,7 @@ from utils.utils import *
 from utils.map import map_builder
 from utils.figure import figure_builder
 from get_data.get_outlooks import *
-
+from utils.style import UND_GREEN
 
 now_utc = datetime.now(timezone.utc)
 
@@ -97,6 +97,8 @@ DROUGHT_COLORS = {0: "#FFFF00", 1: "#FCD37F", 2: "#FFAA00", 3: "#E60000", 4: "#7
 DROUGHT_LABELS = ["D0\nDRY", "D1\nMDT", "D2\nSVR", "D3\nEXT", "D4\nEXC"]
 
 
+FLASH_DROUGHT_COLORS = { 0.5: [1.00, 1.00, 0.40], 1.5: [239/255, 203/255,  58/255], 2.5: [230/255, 207/255, 187/255], 3.5: [198/255, 169/255, 146/255]}
+FLASH_DROUGHT_LABELS = ["INIT.\nOF\nRAPID\nDRYING", "EXTND\nRAPID\nDRYING", "DVLPG\nFLSH\nDRGT", "FLSH\nDRGT\n↓\nDRGT"]
 
 
 
@@ -856,7 +858,7 @@ if outlook is not None:
     if valid_raw and valid_raw.lower() != "nan":
         valid_text += f'  •  Valid: {valid_raw}'
 
-    outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="12-wpc-wso-snow-d1")
+    outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="13-wpc-wso-snow-d1")
 
     figure_builder(fig, ax,
         title="Day 1 Winter Storm Outlook • Snow",
@@ -910,7 +912,7 @@ if outlook is not None:
     if valid_raw and valid_raw.lower() != "nan":
         valid_text += f'  •  Valid: {valid_raw}'
 
-    outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="13-wpc-wso-snow-d2")
+    outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="14-wpc-wso-snow-d2")
 
     figure_builder(fig, ax,
         title="Day 2 Winter Storm Outlook • Snow",
@@ -964,7 +966,7 @@ if outlook is not None:
     if valid_raw and valid_raw.lower() != "nan":
         valid_text += f'  •  Valid: {valid_raw}'
 
-    outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="14-wpc-wso-snow-d3")
+    outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="15-wpc-wso-snow-d3")
 
     figure_builder(fig, ax,
         title="Day 3 Winter Storm Outlook • Snow",
@@ -1018,7 +1020,7 @@ if outlook is not None:
     if valid_raw and valid_raw.lower() != "nan":
         valid_text += f'  •  Valid: {valid_raw}'
 
-    outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="15-wpc-wso-ice-d1")
+    outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="16-wpc-wso-ice-d1")
 
     figure_builder(fig, ax,
         title="Day 1 Winter Storm Outlook • Freezing Rain",
@@ -1072,7 +1074,7 @@ if outlook is not None:
     if valid_raw and valid_raw.lower() != "nan":
         valid_text += f'  •  Valid: {valid_raw}'
 
-    outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="16-wpc-wso-ice-d2")
+    outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="17-wpc-wso-ice-d2")
 
     figure_builder(fig, ax,
         title="Day 2 Winter Storm Outlook • Freezing Rain",
@@ -1126,7 +1128,7 @@ if outlook is not None:
     if valid_raw and valid_raw.lower() != "nan":
         valid_text += f'  •  Valid: {valid_raw}'
 
-    outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="17-wpc-wso-ice-d3")
+    outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="18-wpc-wso-ice-d3")
 
     figure_builder(fig, ax,
         title="Day 3 Winter Storm Outlook • Freezing Rain",
@@ -1147,5 +1149,68 @@ else:
 #############################################################################################################################################################################
 
 
+
+
+
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#################################
+# BUILD U.S. FLASH DROUGHT MONITOR
+#################################
+outlook = get_flash_drought_monitor()
+
+if outlook is not None:
+    fig, ax = map_builder(extent=CONUS_EXTENT, terrain=True, counties=True, county_alpha=0.5,
+                          state_color='darkslategray', border_color='darkslategray')
+
+    for drought_category in [0.5, 1.5, 2.5, 3.5]:
+        data = outlook[outlook["level"] == drought_category]
+        if data.empty:
+            continue
+
+        ax.add_geometries(data.geometry, crs=ccrs.PlateCarree(), facecolor=FLASH_DROUGHT_COLORS[drought_category],
+                          edgecolor="black", linewidth=0.1, alpha=1, zorder=5)
+
+    issue_time = outlook.attrs.get("issue_time") or now_utc
+    valid_start = outlook.attrs.get("valid_start")
+
+    if valid_start is not None:
+        valid_text = f'Valid: {valid_start.strftime("%a %b %d, %Y")}'
+    else:
+        valid_text = f'Released: {issue_time.strftime("%a %b %d, %Y")}'
+
+    ax.text(0.012, 0.015, ("The U.S. Flash Drought Monitor was developed\n"
+                           "and is maintained by Dr. Jordan Christian at\n"
+                            "the University of North Dakota. Learn more\n"
+                            "about the Flash Drought Monitor and access\n"
+                            "additional data at: https://fdm.atmos.und.edu/"),
+            transform=ax.transAxes, ha="left", va="bottom", 
+            fontsize=8, color="white", alpha=0.85, zorder=100, bbox=dict(facecolor="black", edgecolor=UND_GREEN, alpha=0.40, pad=2.5))
+
+    outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="12-us-flash-drought-monitor")
+
+    figure_builder(
+        fig, ax,
+        title="UND Experimental Flash Drought Monitor",
+        subtitle="Areas likely experiencing rapid drying and flash drought development",
+        valid=valid_text,
+        category_colors=[FLASH_DROUGHT_COLORS[i] for i in [0.5, 1.5, 2.5, 3.5]],
+        category_labels=FLASH_DROUGHT_LABELS,
+        category_title=None,
+        footer_left=f"Issued: {issue_time.strftime("%a %b %d, %Y")} • https://fdm.atmos.und.edu/",
+        save_path=outlook_filename)
+
+    plt.close(fig)
+    print("    FINISHED U.S. FLASH DROUGHT MONITOR")
+else:
+    print("    SKIPPING U.S. FLASH DROUGHT MONITOR")
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+#############################################################################################################################################################################
+
+
+
 elapsed_time = comp_time.time() - st
 print(f"############\nSCRIPT FINISHED: time: {comp_time.strftime('%H:%M:%S', comp_time.gmtime(elapsed_time))}\n############")
+
