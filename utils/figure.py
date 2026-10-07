@@ -114,7 +114,7 @@ def figure_builder(
             y0 = bar_y + i * seg_h
             rect = Rectangle((bar_x, y0), bar_w, seg_h, facecolor=color, edgecolor=COLORBAR_EDGE, linewidth=0.8, transform=lax.transAxes,)
             lax.add_patch(rect)
-            lax.text(bar_x + bar_w / 2, y0 + seg_h / 2, label, ha="center", va="center", fontsize=10.5, fontweight="bold", color="#111111", transform=lax.transAxes)
+            lax.text(bar_x + bar_w / 2, y0 + seg_h / 2, label, ha="center", va="center", fontsize=10, fontweight="bold", color="#111111", transform=lax.transAxes)
 
         outer = Rectangle((bar_x, bar_y), bar_w, bar_h, fill=False, edgecolor=COLORBAR_EDGE, linewidth=1.0, transform=lax.transAxes)
         lax.add_patch(outer)

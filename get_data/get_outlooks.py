@@ -696,3 +696,144 @@ def get_us_drought_monitor():
 
     return outlook
 #########################################################################################################
+
+
+
+
+#########################################################################################################
+### U.S. FLASH DROUGHT MONITOR ###
+#########################################################################################################
+import os
+import zipfile
+import tempfile
+FDM_BASE = "https://fdm.atmos.und.edu/data/raw"
+
+def get_flash_drought_monitor():
+
+    st = comp_time.time()
+
+    print('    ACCESSING U.S. FLASH DROUGHT MONITOR')
+
+    now_utc = datetime.now(timezone.utc)
+
+    # FDM is produced during the warm/growing season
+    if now_utc.month < 3 or now_utc.month > 10:
+        print('    U.S. FLASH DROUGHT MONITOR OUT OF SEASON -- skipping')
+        return None
+
+    # Most recent Monday
+    latest_monday = (now_utc.date() - timedelta(days=now_utc.weekday()))
+
+    # Try this Monday first, then the previous Monday.
+    # This handles the period before the new Monday file is uploaded.
+    for weeks_back in [0, 1]:
+
+        data_date = latest_monday - timedelta(days=7 * weeks_back)
+
+        year = data_date.year
+        doy = data_date.timetuple().tm_yday
+
+        url = (f"{FDM_BASE}/{year}/fdm/fdm_{year}_{doy:03d}.zip")
+
+        try:
+            response = SESSION.get(url, timeout=30)
+            if response.status_code == 404:
+                print(f'        FDM {data_date:%Y-%m-%d} not available')
+                continue
+
+            response.raise_for_status()
+
+            # Open ZIP and find the shapefile
+            with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+                shp_files = [ name for name in archive.namelist() if name.lower().endswith(".shp")]
+
+                if not shp_files:
+                    raise RuntimeError("No shapefile found in FDM archive")
+
+                with tempfile.TemporaryDirectory() as tmpdir:
+
+                    archive.extractall(tmpdir)
+
+                    shp_path = os.path.join(
+                        tmpdir,
+                        shp_files[0],
+                    )
+
+                    outlook = geopandas.read_file(
+                        shp_path
+                    )
+
+            if outlook is None or outlook.empty:
+                print(
+                    '    U.S. FLASH DROUGHT MONITOR '
+                    'CONTAINS NO DATA'
+                )
+                continue
+
+            # Require projection information from shapefile
+            if outlook.crs is None:
+                print(
+                    '    U.S. FLASH DROUGHT MONITOR '
+                    'HAS NO CRS -- skipping'
+                )
+                continue
+
+            outlook = outlook.to_crs(
+                "EPSG:4326"
+            )
+
+            # Monday map date
+            valid_time = datetime(
+                data_date.year,
+                data_date.month,
+                data_date.day,
+                tzinfo=timezone.utc,
+            )
+
+            # Prefer actual file modification time for issue time
+            issue_time = valid_time
+
+            last_modified = response.headers.get(
+                "Last-Modified"
+            )
+
+            if last_modified:
+                try:
+                    issue_time = pd.to_datetime(
+                        last_modified,
+                        utc=True,
+                    ).to_pydatetime()
+                except Exception:
+                    pass
+
+            outlook.attrs["issue_time"] = issue_time
+            outlook.attrs["valid_start"] = valid_time
+            outlook.attrs["valid_end"] = None
+            outlook.attrs["source_url"] = url
+
+            elapsed_time = comp_time.time() - st
+
+            print(
+                f'    U.S. FLASH DROUGHT MONITOR LOADED'
+                f'.....{data_date:%Y-%m-%d}.....Time elapsed:',
+                comp_time.strftime(
+                    "%H:%M:%S",
+                    comp_time.gmtime(elapsed_time),
+                ),
+            )
+
+            return outlook
+
+        except Exception as e:
+
+            print(
+                f'        FDM {data_date:%Y-%m-%d} FAILED -- {e}'
+            )
+
+    print(
+        '    U.S. FLASH DROUGHT MONITOR '
+        'NOT AVAILABLE'
+    )
+
+    return None
+#########################################################################################################
