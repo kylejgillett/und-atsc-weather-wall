@@ -40,7 +40,7 @@ from utils.utils import *
 from get_data.get_metars import get_metar_data
 from get_data.get_rap_data import analysis
 from get_data.get_goes_from_aws import download_goes19_visible, subset_goes_to_map
-from get_data.get_radar_mosaic import get_latest_mosaic
+from get_data.get_radar_mosaic import get_latest_mrms
 from get_data.get_wpc_bulletin import plot_bulletin
 from utils.add_nws_headlines import add_nws_headlines
 from utils.map import map_builder
@@ -117,74 +117,36 @@ dwpt_sfc = mpcalc.dewpoint_from_relative_humidity(temp_sfc*units.degC, relh_sfc*
 
 
 # get radar mosaic data
-radar_data, radar_lat, radar_lon, radar_time = get_latest_mosaic(utc_now[0], utc_now[1], utc_now[2])
+radar_data, radar_lat, radar_lon, radar_time = get_latest_mrms(north+5, south-5, west-10, east+10)
 
-# get METAR data
+# get metar data
 try:
     metar_obs, metar_time = get_metar_data(reduced_to=50000)
 
+    # copy before filtering
     filtered_metars = metar_obs.copy()
-
-    # remove invalid coordinates
-    filtered_metars = filtered_metars[
-        np.isfinite(filtered_metars['latitude']) &
-        np.isfinite(filtered_metars['longitude'])
-    ].copy()
-
-    # filter to map domain
-    filtered_metars = filtered_metars[
-        (filtered_metars['latitude'] >= center_lat - box_size*3) &
-        (filtered_metars['latitude'] <= center_lat + box_size*3) &
-        (filtered_metars['longitude'] >= center_lon - box_size*3) &
-        (filtered_metars['longitude'] <= center_lon + box_size*3)
-    ].copy()
-
-    # convert to Fahrenheit
-    filtered_metars['air_temperature'] = (
-        filtered_metars['air_temperature'] * 9/5 + 32
-    )
-    filtered_metars['dew_point_temperature'] = (
-        filtered_metars['dew_point_temperature'] * 9/5 + 32
-    )
-
-    # remove unreasonable temperatures
-    bad_metar = (
-        (filtered_metars['air_temperature'] < -100) |
-        (filtered_metars['air_temperature'] > 140) |
-        (filtered_metars['dew_point_temperature'] < -100) |
-        (filtered_metars['dew_point_temperature'] > 100)
-    )
-
-    filtered_metars = filtered_metars[
-        ~bad_metar
-    ].reset_index(drop=True)
-
-    # additional diagnostics
-    print(f"METAR stations after filtering: {len(filtered_metars)}")
-
-    if not filtered_metars.empty:
-        print(
-            "Invalid coordinates:",
-            (~np.isfinite(filtered_metars[['latitude', 'longitude']])).any(axis=1).sum()
-        )
-
-except Exception as e:
-    print(f"METAR ERROR: {e}")
-    raise
+    # remove stations with invalid coordinates
+    filtered_metars = filtered_metars[np.isfinite(filtered_metars['latitude']) & np.isfinite(filtered_metars['longitude'])]
+    # keep only stations near the map domain
+    filtered_metars = filtered_metars[(filtered_metars['latitude'] >= center_lat - box_size*3) & (filtered_metars['latitude'] <= center_lat + box_size*3) &
+        (filtered_metars['longitude'] >= center_lon - box_size*3) & (filtered_metars['longitude'] <= center_lon + box_size*3)].copy()
+    # convert temperature / dewpoint to Fahrenheit
+    filtered_metars['air_temperature'] = (filtered_metars['air_temperature'] * 9/5) + 32
+    filtered_metars['dew_point_temperature'] = (filtered_metars['dew_point_temperature'] * 9/5) + 32
+    # remove obviously bad temperature observations
+    bad_metar = ((filtered_metars['air_temperature'] < -100) | (filtered_metars['air_temperature'] > 140) |
+        (filtered_metars['dew_point_temperature'] < -100) | (filtered_metars['dew_point_temperature'] > 100))
+    filtered_metars = filtered_metars[~bad_metar].reset_index(drop=True)
+except:
+    pass
 
 # get satellite data
 sat_file = download_goes19_visible(utc_now[0], utc_now[4], utc_now[3])
 xrds_sat = xr.open_dataset(sat_file)
-# sat_crs = xrds_sat.FOV.crs
-# sat_x = xrds_sat.FOV.x.values
-# sat_y = xrds_sat.FOV.y.values
-# sat_extent = (float(np.nanmin(sat_x)), float(np.nanmax(sat_x)),
-#               float(np.nanmin(sat_y)), float(np.nanmax(sat_y)))
 sat_valid = datetime.fromisoformat(xrds_sat.time_coverage_start.replace("Z", "+00:00"))
 sat_type = "GOES-19 Band 02 Visible"
 sat_valid_str = sat_valid.strftime("%Y-%m-%d %H:%MZ")
 sat_time_str = sat_valid.strftime("%H:%MZ")
-
 visible, sat_crs, sat_extent = subset_goes_to_map(xrds_sat, west-5, east+5, south+2, north-2, pad_km=250)
 
 
@@ -203,16 +165,11 @@ fig.canvas.draw()
 ###################################################################
 # SATELLITE
 ###################################################################
-# ax.imshow(xrds_sat["CMI"].values, origin="upper", extent=sat_extent, transform=sat_crs,
-#           cmap="gray", norm=PowerNorm(gamma=0.70, vmin=0.0, vmax=1.3), interpolation="nearest",
-#           regrid_shape=900, alpha=0.90, zorder=1)
-# xrds_sat.close()
-
 ax.imshow(visible.values, origin="upper", extent=sat_extent, transform=sat_crs, cmap="gray",
           norm=PowerNorm(gamma=0.55, vmin=0.0, vmax=1.1), interpolation="nearest",
           regrid_shape=1200, alpha=0.85, zorder=1)
+
 xrds_sat.close()
-# remove temporary GOES file after use
 try:
     os.remove(sat_file)
     print(f"    GOES TEMP FILE REMOVED.....{os.path.basename(sat_file)}")
@@ -243,22 +200,9 @@ try:
     custom_layout.add_value('NW', 'air_temperature', fmt='.0f', fontsize=10, weight='bold', color="#FF662F", path_effects=TEXT_OUTLINE)
     custom_layout.add_value('SW', 'dew_point_temperature', fmt='.0f', fontsize=10, weight='bold', color="#8FE388", path_effects=TEXT_OUTLINE)
     custom_layout.add_symbol('C', 'cloud_coverage', sky_cover, path_effects=TEXT_OUTLINE)
-
-
-    # Transform stations into native map coordinates
-    xy = ax.projection.transform_points(ccrs.PlateCarree(), filtered_metars['longitude'].to_numpy(dtype=float), filtered_metars['latitude'].to_numpy(dtype=float))
-    valid = np.isfinite(xy[:, 0]) & np.isfinite(xy[:, 1])
-    filtered_metars = filtered_metars.loc[valid].reset_index(drop=True)
-    xy = xy[valid]
-    print(f"VALID PROJECTED METARS: {len(filtered_metars)}")
-    if len(filtered_metars) > 0:
-        stationplot = StationPlot(ax, xy[:, 0], xy[:, 1], transform=ax.projection, clip_on=True,
-                                   fontsize=10, zorder=12, alpha=1, color='white')
-        custom_layout.plot(stationplot, filtered_metars)
-
-    # stationplot = StationPlot(ax, filtered_metars['longitude'], filtered_metars['latitude'], clip_on=True,
-    #                         transform=ccrs.PlateCarree(), fontsize=10, zorder=12, alpha=1, color='white')
-    # custom_layout.plot(stationplot, filtered_metars)
+    stationplot = StationPlot(ax, filtered_metars['longitude'], filtered_metars['latitude'], clip_on=True,
+                            transform=ccrs.PlateCarree(), fontsize=10, zorder=12, alpha=1, color='white')
+    custom_layout.plot(stationplot, filtered_metars)
 except: 
     pass
 
@@ -276,20 +220,19 @@ plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
 ###################################################################
 # RADAR MOSAIC
 ###################################################################
-pm = ax.pcolormesh(radar_lon+0.05, radar_lat+0.05, radar_data,
-              vmin=-32, vmax=95, cmap=rs_expertreflect_cmap, alpha=0.8, zorder=1.3, transform=ccrs.PlateCarree())
+pm = ax.pcolormesh(radar_lon, radar_lat, radar_data,
+              vmin=-32, vmax=95, cmap=rs_expertreflect_cmap, alpha=0.8, zorder=1.3, transform=ccrs.PlateCarree(), shading='auto', rasterized=True)
 
 
-###################################################################
+##################################################################
 # LATEST FRONTS BULLETIN
-###################################################################
+##################################################################
 texts, params, geoms, valid_time = plot_bulletin(ax)
-# valid_time = 'N/A'
 
-# ##################################################################
+##################################################################
 # ADD NWS HEADLINES
-# ##################################################################
-# add_nws_headlines(ax, wwa_alpha=0.1, sbw_alpha=0.10, linewidth=0.5, zorder=16, legend=True)
+##################################################################
+#add_nws_headlines(ax, wwa_alpha=0.1, sbw_alpha=0.10, linewidth=0.5, zorder=16, legend=True)
 
 
 
@@ -297,34 +240,6 @@ texts, params, geoms, valid_time = plot_bulletin(ax)
 #################################
 # ADD MAP EXTRAS
 #################################
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'   RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'   RAP MSLP (hPa), {metar_time[11:16]}z METARs, {valid_time}z WPC Fronts, {str(radar_time)[11:16]}z Reflectivity Mosaic, {sat_time[0:2]}:{sat_time[2:4]}z GOES16 Radiance', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# # # colorbar for filled contour
-# # cbar = plt.colorbar(pm, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-# # cbar.set_label('Reflectivity (dBz)', fontsize=15, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(pm, cax=cax, orientation='vertical', ticks=np.arange(-30, 100, 5), extendrect=True)
-# cax.text(3, 0.5, 'Reflectivity (dBz)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
-
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
-
-
 composite_filename = build_filename("staged_figures/regional_surface_analysis/", f"regional_rap_analysis", utc_date)
 
 figure_builder(fig, ax,
