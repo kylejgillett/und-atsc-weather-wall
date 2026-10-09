@@ -40,7 +40,7 @@ from utils.utils import *
 from get_data.get_metars import get_metar_data
 from get_data.get_rap_data import analysis
 from get_data.get_goes_from_aws import download_goes19_visible, subset_goes_to_map
-from get_data.get_radar_mosaic import get_latest_mosaic
+from get_data.get_radar_mosaic import get_latest_mrms
 from get_data.get_wpc_bulletin import plot_bulletin
 from utils.add_nws_headlines import add_nws_headlines
 from utils.map import map_builder
@@ -117,12 +117,12 @@ dwpt_sfc = mpcalc.dewpoint_from_relative_humidity(temp_sfc*units.degC, relh_sfc*
 
 
 # get radar mosaic data
-radar_data, radar_lat, radar_lon, radar_time = get_latest_mosaic(utc_now[0], utc_now[1], utc_now[2])
-
+radar_data, radar_lat, radar_lon, radar_time = get_latest_mrms(north+5, south-5, west-10, east+10)
 
 # get metar data
 try:
     metar_obs, metar_time = get_metar_data(reduced_to=50000)
+
     # copy before filtering
     filtered_metars = metar_obs.copy()
     # remove stations with invalid coordinates
@@ -140,20 +140,13 @@ try:
 except:
     pass
 
-
 # get satellite data
 sat_file = download_goes19_visible(utc_now[0], utc_now[4], utc_now[3])
 xrds_sat = xr.open_dataset(sat_file)
-# sat_crs = xrds_sat.FOV.crs
-# sat_x = xrds_sat.FOV.x.values
-# sat_y = xrds_sat.FOV.y.values
-# sat_extent = (float(np.nanmin(sat_x)), float(np.nanmax(sat_x)),
-#               float(np.nanmin(sat_y)), float(np.nanmax(sat_y)))
 sat_valid = datetime.fromisoformat(xrds_sat.time_coverage_start.replace("Z", "+00:00"))
 sat_type = "GOES-19 Band 02 Visible"
 sat_valid_str = sat_valid.strftime("%Y-%m-%d %H:%MZ")
 sat_time_str = sat_valid.strftime("%H:%MZ")
-
 visible, sat_crs, sat_extent = subset_goes_to_map(xrds_sat, west-5, east+5, south+2, north-2, pad_km=250)
 
 
@@ -172,16 +165,11 @@ fig.canvas.draw()
 ###################################################################
 # SATELLITE
 ###################################################################
-# ax.imshow(xrds_sat["CMI"].values, origin="upper", extent=sat_extent, transform=sat_crs,
-#           cmap="gray", norm=PowerNorm(gamma=0.70, vmin=0.0, vmax=1.3), interpolation="nearest",
-#           regrid_shape=900, alpha=0.90, zorder=1)
-# xrds_sat.close()
-
 ax.imshow(visible.values, origin="upper", extent=sat_extent, transform=sat_crs, cmap="gray",
           norm=PowerNorm(gamma=0.55, vmin=0.0, vmax=1.1), interpolation="nearest",
           regrid_shape=1200, alpha=0.85, zorder=1)
+
 xrds_sat.close()
-# remove temporary GOES file after use
 try:
     os.remove(sat_file)
     print(f"    GOES TEMP FILE REMOVED.....{os.path.basename(sat_file)}")
@@ -232,20 +220,19 @@ plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
 ###################################################################
 # RADAR MOSAIC
 ###################################################################
-pm = ax.pcolormesh(radar_lon+0.05, radar_lat+0.05, radar_data,
-              vmin=-32, vmax=95, cmap=rs_expertreflect_cmap, alpha=0.8, zorder=1.3, transform=ccrs.PlateCarree())
+pm = ax.pcolormesh(radar_lon, radar_lat, radar_data,
+              vmin=-32, vmax=95, cmap=rs_expertreflect_cmap, alpha=0.8, zorder=1.3, transform=ccrs.PlateCarree(), shading='auto', rasterized=True)
 
 
-###################################################################
+##################################################################
 # LATEST FRONTS BULLETIN
-###################################################################
+##################################################################
 texts, params, geoms, valid_time = plot_bulletin(ax)
 
-
-# ##################################################################
+##################################################################
 # ADD NWS HEADLINES
-# ##################################################################
-# add_nws_headlines(ax, wwa_alpha=0.1, sbw_alpha=0.10, linewidth=0.5, zorder=16, legend=True)
+##################################################################
+#add_nws_headlines(ax, wwa_alpha=0.1, sbw_alpha=0.10, linewidth=0.5, zorder=16, legend=True)
 
 
 

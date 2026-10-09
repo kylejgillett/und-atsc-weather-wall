@@ -1,4 +1,3 @@
 __pycache__/
 /staged_figures
-utils/.cartopy_satellite_cache/
-upload/*.backup_*
+/utils/.cartopy_*

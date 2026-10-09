@@ -8,6 +8,13 @@ from siphon.catalog import TDSCatalog
 import numpy as np
 from xarray.backends import NetCDF4DataStore
 from xarray import open_dataset
+import gzip
+import os
+import tempfile
+from datetime import timezone
+import pygrib
+import requests
+
 
 # Download radar reflectivity data
 north = 60
@@ -46,3 +53,61 @@ def get_latest_mosaic(year, month, day):
 
     return dBz, radar_lat, radar_lon, time
 
+
+
+
+def get_latest_mrms(north=60, south=10, west=-125, east=-50):
+
+    # MRMS QC Composite Reflectivity
+    url = ("https://mrms.ncep.noaa.gov/2D/MergedReflectivityQCComposite/MRMS_MergedReflectivityQCComposite.latest.grib2.gz")
+
+    # Download compressed GRIB2
+    response = requests.get(url, timeout=90)
+    response.raise_for_status()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+
+        grib_path = os.path.join(tmpdir, "mrms.grib2")
+
+        # Decompress GRIB2
+        with gzip.open if False else open(grib_path, "wb") as f:
+            f.write(gzip.decompress(response.content))
+
+        # Read MRMS field
+        with pygrib.open(grib_path) as grbs:
+            grb = grbs.message(1)
+            dBz, radar_lat, radar_lon = grb.data()
+            radar_lon = (radar_lon + 180) % 360 - 180
+
+            mask = ((radar_lat >= south) & (radar_lat <= north) & (radar_lon >= west) & (radar_lon <= east))
+            rows, cols = np.where(mask)
+            if rows.size == 0:
+                raise ValueError(
+                    "MRMS geographic subset is empty.\n"
+                    f"Requested: N={north}, S={south}, "
+                    f"W={west}, E={east}\n"
+                    f"Available latitude: "
+                    f"{radar_lat.min():.2f} to {radar_lat.max():.2f}\n"
+                    f"Available longitude: "
+                    f"{radar_lon.min():.2f} to {radar_lon.max():.2f}")
+
+            # Extract rectangular geographic subset
+            r0, r1 = rows.min(), rows.max() + 1
+            c0, c1 = cols.min(), cols.max() + 1
+
+            dBz = dBz[r0:r1, c0:c1]
+            radar_lat = radar_lat[r0:r1, c0:c1]
+            radar_lon = radar_lon[r0:r1, c0:c1]
+
+            # Extract radar valid time
+            time = grb.validDate.replace(tzinfo=timezone.utc)
+
+    # Mask missing data and weak echoes
+    dBz = np.ma.masked_invalid(dBz)
+    dBz = np.ma.masked_less(dBz, 10)
+
+    # Diagnostics
+    print(f"    MRMS COMPOSITE LOADED.....{time:%Y-%m-%d %H:%M}Z")
+    print(f"    MRMS SUBSET: {dBz.shape} | LAT: {radar_lat.min():.2f} to {radar_lat.max():.2f} | LON: {radar_lon.min():.2f} to {radar_lon.max():.2f}")
+
+    return dBz, radar_lat, radar_lon, time
