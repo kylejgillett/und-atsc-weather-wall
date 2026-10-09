@@ -62,6 +62,7 @@ utc_now = [utc_date.strftime("%Y"), utc_date.strftime("%m"), utc_date.strftime("
 # set up rap retrieval 
 # GFK CENTERED
 center_lat, center_lon = 46.841203, -98.777673
+center_lat, center_lon = 30.564, -87.167
 
 box_size   = 4.5 # 6.5
 west = center_lon  - box_size
@@ -118,10 +119,10 @@ dwpt_sfc = mpcalc.dewpoint_from_relative_humidity(temp_sfc*units.degC, relh_sfc*
 # get radar mosaic data
 radar_data, radar_lat, radar_lon, radar_time = get_latest_mosaic(utc_now[0], utc_now[1], utc_now[2])
 
+
 # get metar data
 try:
     metar_obs, metar_time = get_metar_data(reduced_to=50000)
-
     # copy before filtering
     filtered_metars = metar_obs.copy()
     # remove stations with invalid coordinates
@@ -138,6 +139,7 @@ try:
     filtered_metars = filtered_metars[~bad_metar].reset_index(drop=True)
 except:
     pass
+
 
 # get satellite data
 sat_file = download_goes19_visible(utc_now[0], utc_now[4], utc_now[3])
@@ -186,9 +188,12 @@ try:
 except OSError as e:
     print(f"    WARNING: Could not remove GOES temp file: {e}")
 
-###################################################################
+
+
+
+##################################################################
 # METAR STATION PLOTS
-###################################################################
+##################################################################
 try:
     # remove stations that cannot be projected onto the map
     xy = ax.projection.transform_points(ccrs.PlateCarree(), filtered_metars['longitude'].to_numpy(), filtered_metars['latitude'].to_numpy())
@@ -248,34 +253,6 @@ texts, params, geoms, valid_time = plot_bulletin(ax)
 #################################
 # ADD MAP EXTRAS
 #################################
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'   RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'   RAP MSLP (hPa), {metar_time[11:16]}z METARs, {valid_time}z WPC Fronts, {str(radar_time)[11:16]}z Reflectivity Mosaic, {sat_time[0:2]}:{sat_time[2:4]}z GOES16 Radiance', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# # # colorbar for filled contour
-# # cbar = plt.colorbar(pm, aspect=70, fraction=0.02, ax=ax, orientation='horizontal', pad=-0.01, extendrect=True)
-# # cbar.set_label('Reflectivity (dBz)', fontsize=15, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(pm, cax=cax, orientation='vertical', ticks=np.arange(-30, 100, 5), extendrect=True)
-# cax.text(3, 0.5, 'Reflectivity (dBz)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
-
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
-
-
 composite_filename = build_filename("staged_figures/regional_surface_analysis/", f"regional_rap_analysis", utc_date)
 
 figure_builder(fig, ax,

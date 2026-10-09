@@ -1096,57 +1096,57 @@ else:
 
 
 
-#############################################################################################################################################################################
-#############################################################################################################################################################################
-#############################################################################################################################################################################
-#################################
-# BUILD WPC DAY 3 WINTER STORM OUTLOOK - FREEZING RAIN
-#################################
-outlook = get_wpc_winter_storm_outlook(day=3, hazard="freezing_rain")
+# #############################################################################################################################################################################
+# #############################################################################################################################################################################
+# #############################################################################################################################################################################
+# #################################
+# # BUILD WPC DAY 3 WINTER STORM OUTLOOK - FREEZING RAIN
+# #################################
+# outlook = get_wpc_winter_storm_outlook(day=3, hazard="freezing_rain")
 
-if outlook is not None:
-    fig, ax = map_builder(extent=CONUS_EXTENT, terrain=True, counties=True, county_alpha=0.9)
+# if outlook is not None:
+#     fig, ax = map_builder(extent=CONUS_EXTENT, terrain=True, counties=True, county_alpha=0.9)
 
-    for threshold in ["10%", "30%", "50%", "80%"]:
-        data = outlook[outlook["outlook"].astype(str).str.startswith(threshold)]
-        if data.empty:
-            continue
+#     for threshold in ["10%", "30%", "50%", "80%"]:
+#         data = outlook[outlook["outlook"].astype(str).str.startswith(threshold)]
+#         if data.empty:
+#             continue
 
-        ax.add_geometries(
-            data.geometry,
-            crs=ccrs.PlateCarree(),
-            facecolor=WSO_COLORS[threshold],
-            edgecolor="black",
-            linewidth=0.8,
-            alpha=0.76,
-            zorder=6,
-        )
+#         ax.add_geometries(
+#             data.geometry,
+#             crs=ccrs.PlateCarree(),
+#             facecolor=WSO_COLORS[threshold],
+#             edgecolor="black",
+#             linewidth=0.8,
+#             alpha=0.76,
+#             zorder=6,
+#         )
 
-    issue_time = outlook.attrs.get("issue_time") or now_utc
-    valid_raw = str(outlook["valid_time"].iloc[0]) if "valid_time" in outlook.columns else ""
-    valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}'
-    if valid_raw and valid_raw.lower() != "nan":
-        valid_text += f'  •  Valid: {valid_raw}'
+#     issue_time = outlook.attrs.get("issue_time") or now_utc
+#     valid_raw = str(outlook["valid_time"].iloc[0]) if "valid_time" in outlook.columns else ""
+#     valid_text = f'Issued: {issue_time.strftime("%H%MZ %a %b %d, %Y").upper()}'
+#     if valid_raw and valid_raw.lower() != "nan":
+#         valid_text += f'  •  Valid: {valid_raw}'
 
-    outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="18-wpc-wso-ice-d3")
+#     outlook_filename = build_filename(OUTPUT_DIR, "outlook", now_utc, variant="18-wpc-wso-ice-d3")
 
-    figure_builder(fig, ax,
-        title="Day 3 Winter Storm Outlook • Freezing Rain",
-        subtitle="NOAA Weather Prediction Center • Probability of Exceeding Warning Criteria",
-        valid=valid_text,
-        category_colors=[WSO_COLORS[item] for item in ["10%", "30%", "50%", "80%"]],
-        category_labels=WSO_LABELS,
-        category_title=None,
-        footer_left="NOAA Weather Prediction Center Winter Storm Outlook • https://www.wpc.ncep.noaa.gov/wwd/wso/",
-        save_path=outlook_filename)
+#     figure_builder(fig, ax,
+#         title="Day 3 Winter Storm Outlook • Freezing Rain",
+#         subtitle="NOAA Weather Prediction Center • Probability of Exceeding Warning Criteria",
+#         valid=valid_text,
+#         category_colors=[WSO_COLORS[item] for item in ["10%", "30%", "50%", "80%"]],
+#         category_labels=WSO_LABELS,
+#         category_title=None,
+#         footer_left="NOAA Weather Prediction Center Winter Storm Outlook • https://www.wpc.ncep.noaa.gov/wwd/wso/",
+#         save_path=outlook_filename)
 
-    plt.close(fig)
-    print("    FINISHED WPC DAY 3 WINTER STORM OUTLOOK - FREEZING RAIN")
-else:
-    print("    SKIPPING WPC DAY 3 WINTER STORM OUTLOOK - FREEZING RAIN")
-#############################################################################################################################################################################
-#############################################################################################################################################################################
-#############################################################################################################################################################################
+#     plt.close(fig)
+#     print("    FINISHED WPC DAY 3 WINTER STORM OUTLOOK - FREEZING RAIN")
+# else:
+#     print("    SKIPPING WPC DAY 3 WINTER STORM OUTLOOK - FREEZING RAIN")
+# #############################################################################################################################################################################
+# #############################################################################################################################################################################
+# #############################################################################################################################################################################
 
 
 

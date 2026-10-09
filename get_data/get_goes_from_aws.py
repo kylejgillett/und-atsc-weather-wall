@@ -10,16 +10,22 @@ import s3fs
 import numpy as np
 
 # VISIBLE 
-def download_goes19_visible(year, day_of_year, hour, output_dir="../temp_files", lookback_hours=2):
+def download_goes19_visible(year, day_of_year, hour, output_dir="../temp_files", lookback_hours=2, sector='CONUS'):
 
     fs = s3fs.S3FileSystem(anon=True)
     request_time = datetime.strptime(f"{int(year):04d}{int(day_of_year):03d}{int(hour):02d}", "%Y%j%H")
+
+
+    # Select GOES sector
+    sectors = {"CONUS": "ABI-L2-CMIPC", "FULLDISK": "ABI-L2-CMIPF"}
+    product = sectors[sector.upper()]
+
 
     latest_file = None
 
     for offset in range(lookback_hours + 1):
         search_time = request_time - timedelta(hours=offset)
-        prefix = (f"noaa-goes19/ABI-L2-CMIPC/"
+        prefix = (f"noaa-goes19/{product}/"
                 f"{search_time:%Y}/"
                 f"{search_time:%j}/"
                 f"{search_time:%H}/")
@@ -31,7 +37,7 @@ def download_goes19_visible(year, day_of_year, hour, output_dir="../temp_files",
             break
 
     if latest_file is None:
-        print("    NO GOES-19 VISIBLE DATA FOUND")
+        print(f"    NO GOES-19 {sector} VISIBLE DATA FOUND")
         return None
 
     output_dir = Path(output_dir)
@@ -41,10 +47,9 @@ def download_goes19_visible(year, day_of_year, hour, output_dir="../temp_files",
     if not local_file.exists():
         fs.get(latest_file, str(local_file))
 
-    print(f"    GOES-19 VISIBLE DOWNLOADED.....{local_file.name}")
-    return str(local_file)
+    print(f"    GOES-19 {sector} VISIBLE DOWNLOADED.....{local_file.name}")
 
-
+    return str(local_file)  
 
 
 
@@ -112,21 +117,14 @@ def download_goes19_sandwich(year, day_of_year, hour, output_dir="../temp_files"
 
 
 # subset goes file to speed up plotting
-def subset_goes_to_map(ds, west, east, south, north, pad_km=300):
+def subset_goes_to_map(ds, west, east, south, north, pad_km=300, stride=1):
 
     sat_crs = ds.FOV.crs
     map_crs = ccrs.PlateCarree()
     n = 50
 
-    lons = np.concatenate([np.linspace(west, east, n),
-                np.full(n, east),
-                np.linspace(east, west, n),
-                np.full(n, west)])
-
-    lats = np.concatenate([np.full(n, south),
-                np.linspace(south, north, n),
-                np.full(n, north),
-                np.linspace(north, south, n)])
+    lons = np.concatenate([np.linspace(west, east, n),np.full(n, east), np.linspace(east, west, n), np.full(n, west)])
+    lats = np.concatenate([np.full(n, south), np.linspace(south, north, n), np.full(n, north), np.linspace(north, south, n)])
 
     points = sat_crs.transform_points(map_crs, lons, lats)
     x_target = points[:, 0]
@@ -140,7 +138,6 @@ def subset_goes_to_map(ds, west, east, south, north, pad_km=300):
     y = np.asarray(ds.FOV.y.values)
 
     x_idx = np.where((x >= xmin) &(x <= xmax))[0]
-
     y_idx = np.where((y >= ymin) &(y <= ymax))[0]
 
     x0 = x_idx.min()
@@ -148,22 +145,17 @@ def subset_goes_to_map(ds, west, east, south, north, pad_km=300):
     y0 = y_idx.min()
     y1 = y_idx.max() + 1
 
-    visible = ds["CMI"].isel( x=slice(x0, x1), y=slice(y0, y1))
+    visible = ds["CMI"].isel(x=slice(x0, x1, stride), y=slice(y0, y1, stride))
+    x_sub = x[x0:x1:stride]
+    y_sub = y[y0:y1:stride]
 
-    x_sub = x[x0:x1]
-    y_sub = y[y0:y1]
+    dx = np.abs(np.nanmedian(np.diff(x)))
+    dy = np.abs(np.nanmedian(np.diff(y)))
 
-    dx = np.abs(np.nanmedian(np.diff(x_sub)))
-    dy = np.abs(np.nanmedian(np.diff(y_sub)))
+    extent = (min(x[x0], x[x1-1]) - dx / 2, max(x[x0], x[x1-1]) + dx / 2,
+               min(y[y0], y[y1-1]) - dy / 2, max(y[y0], y[y1-1]) + dy / 2)
 
-    extent = (np.nanmin(x_sub) - dx / 2,
-              np.nanmax(x_sub) + dx / 2,
-              np.nanmin(y_sub) - dy / 2,
-              np.nanmax(y_sub) + dy / 2)
-
-    print(f"    GOES SUBSET....."
-        f"{visible.shape[1]}x{visible.shape[0]} "
-        f"from {ds['CMI'].shape[1]}x{ds['CMI'].shape[0]}")
+    print(f"    GOES SUBSET.....{visible.shape[1]}x{visible.shape[0]} from {ds['CMI'].shape[1]}x{ds['CMI'].shape[0]}")
 
     return visible, sat_crs, extent
 
