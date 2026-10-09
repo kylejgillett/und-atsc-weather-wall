@@ -62,6 +62,7 @@ utc_now = [utc_date.strftime("%Y"), utc_date.strftime("%m"), utc_date.strftime("
 # set up rap retrieval 
 # GFK CENTERED
 center_lat, center_lon = 46.841203, -98.777673
+center_lat, center_lon = 30.564, -87.167
 
 box_size   = 4.5 # 6.5
 west = center_lon  - box_size
@@ -118,26 +119,58 @@ dwpt_sfc = mpcalc.dewpoint_from_relative_humidity(temp_sfc*units.degC, relh_sfc*
 # get radar mosaic data
 radar_data, radar_lat, radar_lon, radar_time = get_latest_mosaic(utc_now[0], utc_now[1], utc_now[2])
 
-# get metar data
+# get METAR data
 try:
     metar_obs, metar_time = get_metar_data(reduced_to=50000)
 
-    # copy before filtering
     filtered_metars = metar_obs.copy()
-    # remove stations with invalid coordinates
-    filtered_metars = filtered_metars[np.isfinite(filtered_metars['latitude']) & np.isfinite(filtered_metars['longitude'])]
-    # keep only stations near the map domain
-    filtered_metars = filtered_metars[(filtered_metars['latitude'] >= center_lat - box_size*3) & (filtered_metars['latitude'] <= center_lat + box_size*3) &
-        (filtered_metars['longitude'] >= center_lon - box_size*3) & (filtered_metars['longitude'] <= center_lon + box_size*3)].copy()
-    # convert temperature / dewpoint to Fahrenheit
-    filtered_metars['air_temperature'] = (filtered_metars['air_temperature'] * 9/5) + 32
-    filtered_metars['dew_point_temperature'] = (filtered_metars['dew_point_temperature'] * 9/5) + 32
-    # remove obviously bad temperature observations
-    bad_metar = ((filtered_metars['air_temperature'] < -100) | (filtered_metars['air_temperature'] > 140) |
-        (filtered_metars['dew_point_temperature'] < -100) | (filtered_metars['dew_point_temperature'] > 100))
-    filtered_metars = filtered_metars[~bad_metar].reset_index(drop=True)
-except:
-    pass
+
+    # remove invalid coordinates
+    filtered_metars = filtered_metars[
+        np.isfinite(filtered_metars['latitude']) &
+        np.isfinite(filtered_metars['longitude'])
+    ].copy()
+
+    # filter to map domain
+    filtered_metars = filtered_metars[
+        (filtered_metars['latitude'] >= center_lat - box_size*3) &
+        (filtered_metars['latitude'] <= center_lat + box_size*3) &
+        (filtered_metars['longitude'] >= center_lon - box_size*3) &
+        (filtered_metars['longitude'] <= center_lon + box_size*3)
+    ].copy()
+
+    # convert to Fahrenheit
+    filtered_metars['air_temperature'] = (
+        filtered_metars['air_temperature'] * 9/5 + 32
+    )
+    filtered_metars['dew_point_temperature'] = (
+        filtered_metars['dew_point_temperature'] * 9/5 + 32
+    )
+
+    # remove unreasonable temperatures
+    bad_metar = (
+        (filtered_metars['air_temperature'] < -100) |
+        (filtered_metars['air_temperature'] > 140) |
+        (filtered_metars['dew_point_temperature'] < -100) |
+        (filtered_metars['dew_point_temperature'] > 100)
+    )
+
+    filtered_metars = filtered_metars[
+        ~bad_metar
+    ].reset_index(drop=True)
+
+    # additional diagnostics
+    print(f"METAR stations after filtering: {len(filtered_metars)}")
+
+    if not filtered_metars.empty:
+        print(
+            "Invalid coordinates:",
+            (~np.isfinite(filtered_metars[['latitude', 'longitude']])).any(axis=1).sum()
+        )
+
+except Exception as e:
+    print(f"METAR ERROR: {e}")
+    raise
 
 # get satellite data
 sat_file = download_goes19_visible(utc_now[0], utc_now[4], utc_now[3])
@@ -186,9 +219,12 @@ try:
 except OSError as e:
     print(f"    WARNING: Could not remove GOES temp file: {e}")
 
-###################################################################
+
+
+
+##################################################################
 # METAR STATION PLOTS
-###################################################################
+##################################################################
 try:
     # remove stations that cannot be projected onto the map
     xy = ax.projection.transform_points(ccrs.PlateCarree(), filtered_metars['longitude'].to_numpy(), filtered_metars['latitude'].to_numpy())
@@ -207,9 +243,22 @@ try:
     custom_layout.add_value('NW', 'air_temperature', fmt='.0f', fontsize=10, weight='bold', color="#FF662F", path_effects=TEXT_OUTLINE)
     custom_layout.add_value('SW', 'dew_point_temperature', fmt='.0f', fontsize=10, weight='bold', color="#8FE388", path_effects=TEXT_OUTLINE)
     custom_layout.add_symbol('C', 'cloud_coverage', sky_cover, path_effects=TEXT_OUTLINE)
-    stationplot = StationPlot(ax, filtered_metars['longitude'], filtered_metars['latitude'], clip_on=True,
-                            transform=ccrs.PlateCarree(), fontsize=10, zorder=12, alpha=1, color='white')
-    custom_layout.plot(stationplot, filtered_metars)
+
+
+    # Transform stations into native map coordinates
+    xy = ax.projection.transform_points(ccrs.PlateCarree(), filtered_metars['longitude'].to_numpy(dtype=float), filtered_metars['latitude'].to_numpy(dtype=float))
+    valid = np.isfinite(xy[:, 0]) & np.isfinite(xy[:, 1])
+    filtered_metars = filtered_metars.loc[valid].reset_index(drop=True)
+    xy = xy[valid]
+    print(f"VALID PROJECTED METARS: {len(filtered_metars)}")
+    if len(filtered_metars) > 0:
+        stationplot = StationPlot(ax, xy[:, 0], xy[:, 1], transform=ax.projection, clip_on=True,
+                                   fontsize=10, zorder=12, alpha=1, color='white')
+        custom_layout.plot(stationplot, filtered_metars)
+
+    # stationplot = StationPlot(ax, filtered_metars['longitude'], filtered_metars['latitude'], clip_on=True,
+    #                         transform=ccrs.PlateCarree(), fontsize=10, zorder=12, alpha=1, color='white')
+    # custom_layout.plot(stationplot, filtered_metars)
 except: 
     pass
 
@@ -235,7 +284,7 @@ pm = ax.pcolormesh(radar_lon+0.05, radar_lat+0.05, radar_data,
 # LATEST FRONTS BULLETIN
 ###################################################################
 texts, params, geoms, valid_time = plot_bulletin(ax)
-
+# valid_time = 'N/A'
 
 # ##################################################################
 # ADD NWS HEADLINES
