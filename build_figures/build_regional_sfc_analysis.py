@@ -62,7 +62,7 @@ utc_now = [utc_date.strftime("%Y"), utc_date.strftime("%m"), utc_date.strftime("
 # set up rap retrieval 
 # GFK CENTERED
 center_lat, center_lon = 46.841203, -98.777673
-center_lat, center_lon = 30.564, -87.167
+# center_lat, center_lon = 30.564, -87.167
 
 box_size   = 4.5 # 6.5
 west = center_lon  - box_size
