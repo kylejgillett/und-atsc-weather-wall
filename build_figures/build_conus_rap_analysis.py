@@ -1,6 +1,6 @@
 ##########################################################
 #              RAP ANALYSIS FIGURES SCRIPT
-#  (c) KYLE J GILLETT, UNIVERSITY OF NORTH DAKOTA, 2025
+#  (c) KYLE J GILLETT, UNIVERSITY OF NORTH DAKOTA, 2025, 2026
 ##########################################################
 
 print("############\nSCRIPT RUNNING\n############")
@@ -46,6 +46,7 @@ from get_data.get_radar_mosaic import get_latest_mosaic
 from get_data.get_wpc_bulletin import plot_bulletin
 from utils.map import map_builder
 from utils.figure import figure_builder
+from utils.hodograph import add_hodograph_network
 
 
 # parse date information for sat data download
@@ -124,20 +125,20 @@ cape_ml = ndimage.gaussian_filter(raw_data.variables['Convective_available_poten
 cin_ml  = ndimage.gaussian_filter(raw_data.variables['Convective_inhibition_pressure_difference_layer'][0,0], sigma=sigma)
 
 # --- BUNKERS STORM MOTION --------------------------------------------------
-bunkers_sm_u = raw_data['U-Component_Storm_Motion_height_above_ground_layer'][0,0]
-bunkers_sm_v = raw_data['V-Component_Storm_Motion_height_above_ground_layer'][0,0]
+# bunkers_sm_u = raw_data['U-Component_Storm_Motion_height_above_ground_layer'][0,0]
+# bunkers_sm_v = raw_data['V-Component_Storm_Motion_height_above_ground_layer'][0,0]
 
 # --- STORM-RELATIVE MEAN WIND (6-9km and 0-2km) -----------------------------
-hgt_iso = raw_data['Geopotential_height_isobaric'][0]
-mask_6_9km = (hgt_iso >= 6000) & (hgt_iso <= 9000)
-u_6_9km = raw_data['u-component_of_wind_isobaric'][0].where(mask_6_9km).mean(dim='isobaric', skipna=True)
-v_6_9km = raw_data['v-component_of_wind_isobaric'][0].where(mask_6_9km).mean(dim='isobaric', skipna=True)
-u_0_2km = raw_data['u-component_of_wind_height_above_ground'][0].sel(height_above_ground=slice(0,2000)).mean(dim='height_above_ground', skipna=True)
-v_0_2km = raw_data['v-component_of_wind_height_above_ground'][0].sel(height_above_ground=slice(0,2000)).mean(dim='height_above_ground', skipna=True)
-srw_6_9_u = (u_6_9km - bunkers_sm_u) * 1.94384
-srw_6_9_v = (v_6_9km - bunkers_sm_v) * 1.94384
-srw_0_2_u = (u_0_2km - bunkers_sm_u) * 1.94384
-srw_0_2_v = (v_0_2km - bunkers_sm_v) * 1.94384
+# hgt_iso = raw_data['Geopotential_height_isobaric'][0]
+# mask_6_9km = (hgt_iso >= 6000) & (hgt_iso <= 9000)
+# u_6_9km = raw_data['u-component_of_wind_isobaric'][0].where(mask_6_9km).mean(dim='isobaric', skipna=True)
+# v_6_9km = raw_data['v-component_of_wind_isobaric'][0].where(mask_6_9km).mean(dim='isobaric', skipna=True)
+# u_0_2km = raw_data['u-component_of_wind_height_above_ground'][0].sel(height_above_ground=slice(0,2000)).mean(dim='height_above_ground', skipna=True)
+# v_0_2km = raw_data['v-component_of_wind_height_above_ground'][0].sel(height_above_ground=slice(0,2000)).mean(dim='height_above_ground', skipna=True)
+# srw_6_9_u = (u_6_9km - bunkers_sm_u) * 1.94384
+# srw_6_9_v = (v_6_9km - bunkers_sm_v) * 1.94384
+# srw_0_2_u = (u_0_2km - bunkers_sm_u) * 1.94384
+# srw_0_2_v = (v_0_2km - bunkers_sm_v) * 1.94384
 
 
 
@@ -261,31 +262,6 @@ every = 20
 barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
                 uwnd_300[0::every, 0::every], vwnd_300[0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
-
-
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'     RAP 300 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'     Heights (m), Wind (kt)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(50, 160, 5)[::1], extendrect=True)
-# cax.text(3, 0.5, f'Wind Speed (kts)',ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
-
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
-
 
 composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", now_utc, variant='300a')
 
@@ -419,31 +395,6 @@ barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every
                 uwnd_500[0::every, 0::every], vwnd_500[0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
 
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'     RAP 500 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'     Heights (m), Wind (kt)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(30, 140, 5), extendrect=True)
-# cax.text(3, 0.5, 'Wind Speed (kts)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
-
-
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
-
-
 composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", now_utc, variant='500a')
 
 figure_builder(fig, ax,
@@ -505,33 +456,6 @@ every = 20
 barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
                 uwnd_500[0::every, 0::every], vwnd_500[0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=12)
-
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'     RAP 500 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'     Heights (m), Rel. Vorticity (/sec•10⁵), Wind (kt)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(vort_cf, cax=cax, orientation='vertical', ticks=np.arange(-30, 52, 2), extendrect=True)
-# cax.text(3, 0.5, 'Relative Vorticity (/sec•10⁵)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
-
-
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
-
-# composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='500b')
-# plt.savefig(composite_filename, bbox_inches="tight")
 
 composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", now_utc, variant='500b')
 
@@ -666,31 +590,6 @@ barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every
                 uwnd_700[0::every, 0::every], vwnd_700[0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'     RAP 700 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'     Heights (m), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-40, 42, 5), extendrect=True)
-# cax.text(3, 0.5, 'Temperature (C)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
-
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
-
-#composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='700a')
-
 composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", now_utc, variant='700a')
 
 figure_builder(fig, ax,
@@ -754,29 +653,6 @@ barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every
                 uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'     RAP 850 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'     Heights (m), Wind (kts)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(25, 100, 5), extendrect=True)
-# cax.text(3, 0.5, 'Wind Speed (kts)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
-
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
-
 composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", now_utc, variant='850a')
 
 figure_builder(fig, ax,
@@ -832,31 +708,6 @@ every = 15
 barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
                 uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
-
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'     RAP 850 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'     Heights (m), Temperature (C), Wind (kts)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-40, 42, 5), extendrect=True)
-# cax.text(3, 0.5, 'Temperature (C)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
-
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
-
-# composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='850b')
 
 composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", now_utc, variant='850b')
 
@@ -931,32 +782,6 @@ try:
                     uwnd_850[0::every, 0::every], vwnd_850[0::every, 0::every],
                     length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
-    # # plot title, add one to the left with model name and data names, add another to the right with time info
-    # plt.figtext(0.08, 1.03, f'     RAP 850 hPa Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-    # plt.figtext(0.08, 1.00, f'     Heights (m), 3hr Temperature Adv (C/3hr), Frontogenesis (>2'+u'\xb0'+'C / 100km / 3hr), Wind (kt)', ha='left', fontsize=18, color='white')
-    # plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-    # plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-    # cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-    # cbar = fig.colorbar(tadv_contourf, cax=cax, orientation='vertical', ticks=np.arange(-7,7.25,1), extendrect=True)
-    # cax.text(3, 0.5, 'Temperature Advection' + ' ('+u'\xb0'+'C / 3hr)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-    # cbar.ax.tick_params(axis='y', labelcolor='white') 
-    # for t in cbar.ax.get_yticklabels():
-    #     t.set_fontweight('bold')
-    #     t.set_fontsize(9)
-    # cbar.ax.set_facecolor('black')
-
-
-    # # add UND logo
-    # from PIL import Image
-    # img = Image.open('utils/images/und-logo.png')
-    # #                  side-side  up-down  size   size
-    # imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-    # plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-    # imgax.imshow(img)
-    # imgax.axis('off')
-
-    # composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='850c')
-
     composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", now_utc, variant='850c')
 
     figure_builder(fig, ax,
@@ -1017,32 +842,6 @@ barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every
                 uwnd_sfc[0, 0::every, 0::every], vwnd_sfc[0, 0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'   RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'   MSLP (hPa), Temperature (F), Wind (kts)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-60, 130, 10), extendrect=True)
-# cax.text(3, 0.5, 'Temperature (F)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
-
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
-
-# composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='000a')
-# plt.savefig(composite_filename, bbox_inches="tight")
-
 composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", now_utc, variant='000a')
 
 figure_builder(fig, ax,
@@ -1099,32 +898,6 @@ barbs = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every
                 uwnd_sfc[0, 0::every, 0::every], vwnd_sfc[0, 0::every, 0::every],
                 length=6.5, alpha=0.7, transform=ccrs.PlateCarree(), zorder=11)
 
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'   RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'    MSLP (hPa), Dewpoint (F), Wind (kts)', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', ticks=np.arange(-50, 90, 5), extendrect=True)
-# cax.text(3, 0.5, 'Dewpoint temperature (F)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
-
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
-
-# composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='000b')
-# plt.savefig(composite_filename, bbox_inches="tight")
-
 composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", now_utc, variant='000b')
 
 figure_builder(fig, ax,
@@ -1161,6 +934,11 @@ plt.close(fig)
 fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
 
+# ADD HODOGRAPHS
+hodo_axes = add_hodograph_network(ax=ax, raw_data=raw_data, lons=lons, lats=lats, cape=cape_ml,
+                                   stride=18, inset_size=0.085, max_wind=60, max_height=9000, cape_threshold=None, show_storm_motion=False)
+
+
 # plot mslp
 cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
                 linewidths=2, linestyles='-',
@@ -1171,26 +949,25 @@ plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
 
 
 contourf = ax.contourf(lons, lats, cape_ml, levels=np.arange(100, 5000, 100), extend='max',
-                 cmap=cape_cmap, transform=ccrs.PlateCarree(), alpha=0.7, zorder=4)
+                 cmap=cape_cmap, transform=ccrs.PlateCarree(), alpha=0.4, zorder=4)
 
 
 
+# # plot storm-relative mean wind barbs (6-9km and 0-2km)
+# every = 15
 
-# plot storm-relative mean wind barbs (6-9km and 0-2km)
-every = 15
+# mask = cape_ml > 50
+# # 6–9 km SRMW
+# barbs_6_9 = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+#     np.where(mask[0::every, 0::every],srw_6_9_u.values[0::every, 0::every], np.nan),
+#     np.where(mask[0::every, 0::every],srw_6_9_v.values[0::every, 0::every], np.nan),
+#     length=5.5, color='darkblue', alpha=0.8, transform=ccrs.PlateCarree(), zorder=14)
 
-mask = cape_ml > 50
-# 6–9 km SRMW
-barbs_6_9 = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
-    np.where(mask[0::every, 0::every],srw_6_9_u.values[0::every, 0::every], np.nan),
-    np.where(mask[0::every, 0::every],srw_6_9_v.values[0::every, 0::every], np.nan),
-    length=5.5, color='darkblue', alpha=0.8, transform=ccrs.PlateCarree(), zorder=14)
-
-# 0–2 km SRMW
-barbs_0_2 = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
-    np.where(mask[0::every, 0::every], srw_0_2_u.values[0::every, 0::every], np.nan),
-    np.where(mask[0::every, 0::every], srw_0_2_v.values[0::every, 0::every], np.nan),
-    length=5.5, color='darkred', alpha=1, transform=ccrs.PlateCarree(), zorder=14)
+# # 0–2 km SRMW
+# barbs_0_2 = ax.barbs(lons.values[0::every, 0::every], lats.values[0::every, 0::every],
+#     np.where(mask[0::every, 0::every], srw_0_2_u.values[0::every, 0::every], np.nan),
+#     np.where(mask[0::every, 0::every], srw_0_2_v.values[0::every, 0::every], np.nan),
+#     length=5.5, color='darkred', alpha=1, transform=ccrs.PlateCarree(), zorder=14)
 
 
 # plot MLCIN as a hatch
@@ -1200,45 +977,18 @@ cin_hatch = np.where(cin_ml[:,:] < -40, 1, np.nan)
 ax.contourf(lons, lats, cin_hatch, levels=[0.5, 1.5], colors='none', hatches=['////'],
     edgecolors='red', linewidths=0.05, transform=ccrs.PlateCarree(), zorder=13, alpha=0)
 
-
-
-# # plot title, add one to the left with model name and data names, add another to the right with time info
-# plt.figtext(0.08, 1.03, f'   RAP Surface Analysis | {valid_date[0:10]} {valid_date[11:-13]}z', weight='bold', ha='left', fontsize=20, color='white')
-# plt.figtext(0.08, 1.00, f'    MSLP (hPa), MLCAPE (J/kg), MLCIN (<-40 J/kg), 6-9km (gray) & 0-2km (black) SRW Crossover', ha='left', fontsize=18, color='white')
-# plt.figtext(0.915, 1.04, f' ', ha='left', fontsize=20)
-# plt.figtext(0.915, -0.01, f' ', ha='left', fontsize=20)
-# cax = fig.add_axes([0.91, 0.024, 0.01, 0.95])
-# cbar = fig.colorbar(contourf, cax=cax, orientation='vertical', extendrect=True)
-# # Use a subset of ticks so labels are legible and the bar matches the provided colorbar style
-# cbar.set_ticks([100, 1000, 2000, 3000, 4000, 5000, 6000])
-# cax.text(3.7, 0.5, '250hPa Mixed Layer Convective Available Potential Energy (J/kg)', ha='left',va='center',rotation=270, color='white',fontsize=12,fontweight='bold',transform=cax.transAxes)
-# cbar.ax.tick_params(axis='y', labelcolor='white') 
-# for t in cbar.ax.get_yticklabels():
-#     t.set_fontweight('bold')
-#     t.set_fontsize(9)
-# cbar.ax.set_facecolor('black')
-
-# # add UND logo
-# from PIL import Image
-# img = Image.open('utils/images/und-logo.png')
-# #                  side-side  up-down  size   size
-# imgax = fig.add_axes([0.83, 1.01, 0.06, 0.06], anchor='SE', zorder=3)
-# plt.figtext(0.81, 0.995, f'ATMOSPHERIC SCIENCES', ha='left', weight='bold', fontsize=10, color='white')
-# imgax.imshow(img)
-# imgax.axis('off')
-
-# composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='000c')
 composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", now_utc, variant='000c')
 
 figure_builder(fig, ax,
     title=f"RAP Analysis • Surface",
-    subtitle=f"MSLP (hPa), MLCAPE (J/kg), MLCIN (<-40 J/kg), 6-9km (gray) & 0-2km (black) SRW Crossover",
+    subtitle=f"MSLP (hPa), MLCAPE (J/kg), MLCIN (<-40 J/kg), Ground-Relative Hodographs (0-9km)",
     valid=f"Valid • {valid_date[0:10]} {valid_date[11:-13]}z",
     mappable=contourf,
     cbar_title="250hPa Mixed Layer Convective Available Potential Energy",
     cbar_units="J/kg",
     cbar_ticks=[100, 1000, 2000, 3000, 4000, 5000, 6000],
-    footer_left=f"RAP 13km • INIT {valid_date[0:10]} {valid_date[11:-13]}z",
+    footer_left=f"RAP 13km • INIT {valid_date[0:10]} {valid_date[11:-13]}z  •  HODOGRAPH - purple: 0-1km, red: 1-3km, orange: 3-6km, yellow: 6-9km. Range rings: 25kts",
+    footer_right= " ",
     save_path=composite_filename)
 
 print("    FINISHED SFC CAPE MAP")
@@ -1315,20 +1065,18 @@ pm = ax.pcolormesh(radar_lon+0.05, radar_lat+0.05, radar_data,
 # plot wpc fronts bulletin
 texts, params, geoms, valid_time = plot_bulletin(ax)
 
-
-
-# composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", data_date.astype('datetime64[us]').item(), variant='000d')
 composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", now_utc, variant='000d')
 
 figure_builder(fig, ax,
     title=f"RAP Analysis • Surface",
     subtitle=F'RAP MSLP (hPa), Surface Observations, WPC Fronts, MRMS Reflectivity Mosaic (dBz)',
     valid=f"Valid • {valid_date[0:10]} {valid_date[11:-13]}z",
-    mappable=None, #pm,
+    mappable=pm,
     cbar_title="Reflectivity",
     cbar_units="dBz",
     cbar_ticks=np.arange(-15, 95, 5),
     footer_left=f"RAP 13km  •  INIT {valid_date[0:10]} {valid_date[11:-13]}z  •  {metar_time[11:16]}z METARs, {valid_time}z WPC Fronts, {str(radar_time)[11:16]}z Reflectivity Mosaic, {sat_time_str} {sat_type}",
+    footer_right=' ',
     save_path=composite_filename)
 
 #{sat_time_str} {sat_type}, GOES19 Band 02 Visible
