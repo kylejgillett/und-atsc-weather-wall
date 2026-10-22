@@ -44,13 +44,9 @@ def analysis(center_lat=37.86, center_lon=-98.61, box_size=50):
         cat = TDSCatalog(url)
         source = 'RAP ANALYSIS'
     except:
-        try:
-            cat = TDSCatalog("https://tds.scigw.unidata.ucar.edu/thredds/catalog/grib/NCEP/RAP/CONUS_13km/latest.xml")
-            source='RAP ANALYSIS'
-        except:
-            sys.exit(
-                "NCSS URL FAILED -- THIS HAPPENS WHEN A BAD REQUEST IS MADE. RAP Analysis data may not be available at this time.")
-            pass
+        sys.exit(
+            "NCSS URL FAILED -- THIS HAPPENS WHEN A BAD REQUEST IS MADE. RAP Analysis data may not be available at this time.")
+        pass
 
     # set up TDS query
     latest_ds = list(cat.datasets.values())[0]
