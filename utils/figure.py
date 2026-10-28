@@ -40,7 +40,7 @@ def figure_builder(
     category_title=None,
     footer_left=None,
     footer_right="UND Atmospheric Sciences • Weather Wall",
-    logo_path="utils/images/und-logo.png",
+    logo_path="/data/jordan.i.christian/UND_WRF/und-atsc-weather-wall/utils/images/und-logo.png",
     save_path=None):
 
     # outer frame
