@@ -2,16 +2,16 @@
 
 set -e
 
-BUILD_SCRIPT="build_figures/build_hrrr_forecast.py"
-STAGE_DIR="staged_figures/hrrr_forecasts"
+BUILD_SCRIPT="/data/jordan.i.christian/UND_WRF/und-atsc-weather-wall/build_figures/build_hrrr_forecast.py"
+STAGE_DIR="/data/jordan.i.christian/UND_WRF/und-atsc-weather-wall/staged_figures/hrrr_forecasts"
 
 TYPE="hrrr_forecast"
 BASE_URL="https://weather.atmos.und.edu"
 
-rm -f "$STAGE_DIR"/hrrr_forecast_*.png
+# rm -f "$STAGE_DIR"/hrrr_forecast_*.png
 
 #Build new HRRR forecast
-python "$BUILD_SCRIPT"
+# python "$BUILD_SCRIPT"
 
 # Find HRRR forecast files
 FILES=$(ls -1 "$STAGE_DIR"/hrrr_forecast_*.png | sort)
@@ -43,6 +43,6 @@ for FILE in $FILES; do
 
 done
 
-rm -f "$STAGE_DIR"/hrrr_forecast_*.png
+# rm -f "$STAGE_DIR"/hrrr_forecast_*.png
 
 #echo "HRRR forecast upload finished."

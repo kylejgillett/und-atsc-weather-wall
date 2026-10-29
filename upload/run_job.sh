@@ -47,42 +47,6 @@ export PATH="${VENV_DIR}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/
 
 cd "$REPO_DIR"
 
-
-# ============================================================
-# HEALTHCHECK
-# ============================================================
-
-HC_URL=""
-
-FIRST_JOB="$(basename "$1")"
-
-case "$FIRST_JOB" in
-
-    upload_local_nexrad_analysis.sh)
-        HC_URL="${HC_LOCAL_REGIONAL:-}"
-        ;;
-
-    upload_gfs_forecasts.sh)
-        HC_URL="${HC_GFS:-}"
-        ;;
-
-    upload_soundings_obs.sh)
-        HC_URL="${HC_SOUNDINGS_OBS:-}"
-        ;;
-
-    upload_conus_rap_analysis.sh)
-        HC_URL="${HC_HOURLY_FORECASTS:-}"
-        ;;
-
-    upload_asos.sh)
-        HC_URL="${HC_ASOS_BUFKIT:-}"
-        ;;
-
-esac
-
-HC_URL="${HC_URL%/}"
-
-
 # ============================================================
 # LOCK
 # ============================================================
@@ -106,15 +70,6 @@ fi
 TIME_NOW=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 
 echo "$TIME_NOW | RUN     | $*" >> "$MASTER_LOG"
-
-# Send Healthchecks START ping.
-if [ -n "$HC_URL" ]; then
-    curl -fsS \
-        -m 10 \
-        --retry 3 \
-        "${HC_URL}/start" \
-        >/dev/null 2>&1 || true
-fi
 
 
 # ============================================================
@@ -177,29 +132,5 @@ echo "========================================================================"
 echo "  + JOB SEQUENCE FINISHED"
 echo "  + UTC: $(date -u '+%Y-%m-%d %H:%M:%SZ')"
 echo "========================================================================"
-
-
-# ============================================================
-# HEALTHCHECK RESULT
-# ============================================================
-
-if [ -n "$HC_URL" ]; then
-    if [ "$STATUS" -eq 0 ]; then
-        # Successful completion.
-        curl -fsS \
-            -m 10 \
-            --retry 3 \
-            "$HC_URL" \
-            >/dev/null 2>&1 || true
-    else
-        # One or more scripts in the bundle failed.
-        curl -fsS \
-            -m 10 \
-            --retry 3 \
-            "${HC_URL}/fail" \
-            >/dev/null 2>&1 || true
-    fi
-fi
-
 
 exit "$STATUS"
