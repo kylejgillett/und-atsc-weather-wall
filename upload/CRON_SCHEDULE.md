@@ -22,7 +22,7 @@ Logs are found at:
 | Time | Schedule | Scripts |
 |---|---|---|
 | `:00` | Every 15 minutes | `upload_local_nexrad_analysis.sh` + `upload_regional_rap_analysis.sh` |
-| `:04` | 03, 09, 15, 21 UTC | `upload_gfs_forecasts.sh` |
+| `:04` | 03, 09, 15, 21 UTC | `upload_gfs_forecasts.sh` + `upload_gfk_forecast_meteogram.sh` |
 | `:15` | Every 15 minutes | `upload_local_nexrad_analysis.sh` + `upload_regional_rap_analysis.sh` |
 | `:20` | 01, 13, 19 UTC | `upload_soundings_obs.sh` |
 | `:30` | Every 15 minutes | `upload_local_nexrad_analysis.sh` + `upload_regional_rap_analysis.sh` |
@@ -54,7 +54,7 @@ Logs are found at:
     */15 * * * * $REPO/upload/run_job.sh upload_local_nexrad_analysis.sh upload_regional_rap_analysis.sh >> $LOGDIR/local_regional_analysis.log 2>&1
 
 
-    # GFS forecasts: 02:04, 08:04, 14:04, 20:04 UTC
+    # GFS forecasts & NWS FGF/GEFS Forecast Meteogram: 02:04, 08:04, 14:04, 20:04 UTC
     4 3,9,15,21 * * * $REPO/upload/run_job.sh upload_gfs_forecasts.sh >> $LOGDIR/gfs_forecasts.log 2>&1
 
 
