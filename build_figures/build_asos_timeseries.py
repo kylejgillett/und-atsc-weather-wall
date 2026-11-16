@@ -306,11 +306,7 @@ for id_num, station_id in enumerate(stations):
     ###########################
     # BUILD FILENAME
     ###########################
-    filename = build_filename(
-        "staged_figures/asos_timeseries/",
-        "asos_timeseries",
-        now_utc,
-        variant=f"0{id_num}-{station_id}")
+    filename = build_filename("staged_figures/asos_timeseries/", "asos_timeseries", now_utc, variant=f"0{id_num}-{station_id}")
 
 
 
@@ -329,8 +325,7 @@ for id_num, station_id in enumerate(stations):
         valid=(f"Valid • {latest_time.strftime('%Y-%m-%d %H:%MZ')}"),
         footer_left=textstr,
         footer_right=" ",
-        save_path=filename,
-    )
+        save_path=filename,)
 
 
     plt.close(fig)
