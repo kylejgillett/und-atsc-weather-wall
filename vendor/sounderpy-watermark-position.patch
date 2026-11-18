@@ -1,0 +1,44 @@
+diff -ru a/src/sounderpy/plot/components.py b/src/sounderpy/plot/components.py
+--- a/src/sounderpy/plot/components.py	2026-11-18 08:33:34.000000000 -0600
++++ b/src/sounderpy/plot/components.py	2026-11-18 14:37:40.681360368 -0600
+@@ -2128,7 +2128,7 @@
+ 
+ 
+ 
+-def _plot_credits(target, theme, x=0.168, title_y=-0.105, subtitle_y=-0.125, style="full", title_fontsize=FONT_SIZES["watermark"], subtitle_fontsize=FONT_SIZES["watermark_sub"], max_x=0.525):
++def _plot_credits(target, theme, x=0.177, title_y=-0.105, subtitle_y=-0.125, style="full", title_fontsize=FONT_SIZES["watermark"], subtitle_fontsize=FONT_SIZES["watermark_sub"], max_x=0.525):
+     """Add the watermark text to a figure (in figure fractions) or an axis (in axis fractions, behind its data)."""
+     if not WATERMARK["show"]:
+         return
+@@ -2147,7 +2147,7 @@
+         _fit_text(text, target, max_x - x)
+ 
+ 
+-def _plot_data_source(fig, site_info, theme, x=0.168, y=-0.141, max_x=0.525):
++def _plot_data_source(fig, site_info, theme, x=0.177, y=-0.141, max_x=0.525):
+     """Add a faded line under the watermark naming where the data came from, when the getter recorded it."""
+     data_source = site_info.get("data-source")
+     if not data_source:
+diff -ru a/src/sounderpy/plot/style.py b/src/sounderpy/plot/style.py
+--- a/src/sounderpy/plot/style.py	2026-11-18 08:33:34.000000000 -0600
++++ b/src/sounderpy/plot/style.py	2026-11-18 14:37:40.681360368 -0600
+@@ -210,7 +210,7 @@
+                         "moisture_table": (0.53, -0.13, 0.15, 0.23),
+                         "kinematics_table": (0.68, -0.13, 0.265, 0.23),
+                         "indices_box": (1.094, 0.10, 0.112, 0.151),
+-                        "logo": (0.115, -0.135, 0.05, 0.05),
++                        "logo": (0.124, -0.135, 0.05, 0.05),
+                         "margin": (0.1136, -0.1454, 1.1064, 1.1639)}
+ 
+ # axis positions for the hodograph and VAD figures, as figure fractions
+@@ -236,8 +236,8 @@
+                               "table_row_height": 0.03,
+                               "title_x": (0.1237, 1.206),
+                               "subtitle_fontsize": FONT_SIZES["subtitle"],
+-                              "credits_x": (0.168, 0.525),
+-                              "logo": (0.115, 0.05),
++                              "credits_x": (0.177, 0.534),
++                              "logo": (0.124, 0.05),
+                               "margin_x": (0.1136, 1.22)},
+                      "sounding": {"figsize": (13.4, 13),
+                                   "skewt": (0.0299, 0.1005, 0.9478, 0.85),
