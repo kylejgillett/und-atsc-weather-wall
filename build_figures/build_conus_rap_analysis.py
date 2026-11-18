@@ -43,7 +43,7 @@ from utils.colormaps import *
 from get_data.get_metars import get_metar_data
 from get_data.get_rap_data import analysis
 from get_data.get_goes_from_aws import download_goes19_visible, subset_goes_to_map
-from get_data.get_radar_mosaic import get_latest_mosaic, fetch_latest_mosaic
+from get_data.get_radar_mosaic import get_latest_mrms
 from get_data.get_wpc_bulletin import plot_bulletin
 from utils.map import map_builder, project_grid
 from utils.figure import figure_builder
@@ -81,10 +81,11 @@ north = center_lat + box_size
 projection = ccrs.LambertConformal(central_longitude=-95.0, central_latitude=25.0, standard_parallels=(25.0, 25.0))
 
 # start the radar, metar, and satellite downloads in the background
-# while the rap data loads. only downloads run in these threads -- all
-# NetCDF/HDF5 files are opened on the main thread (HDF5 is not thread-safe)
+# while the rap data loads. the radar thread also decodes the MRMS GRIB file
+# (pygrib/eccodes); all NetCDF/HDF5 files are opened on the main thread
+# (HDF5 is not thread-safe)
 fetch_pool = ThreadPoolExecutor(max_workers=3)
-radar_fetch = fetch_pool.submit(fetch_latest_mosaic, utc_now[0], utc_now[1], utc_now[2])
+radar_fetch = fetch_pool.submit(get_latest_mrms, north=60, south=10, west=-125, east=-50, stride=2)
 metar_fetch = fetch_pool.submit(get_metar_data, reduced_to=150000)
 sat_fetch = fetch_pool.submit(download_goes19_visible, utc_now[0], utc_now[4], utc_now[3], sector='FULLDISK')
 
@@ -211,7 +212,7 @@ adv = ndimage.gaussian_filter(adv, sigma=2, order=0) * units('K/sec')
 ############################################################################################################################################################################
 ############################################################################################################################################################################
 # get radar mosaic data
-radar_data, radar_lat, radar_lon, radar_time = get_latest_mosaic(utc_now[0], utc_now[1], utc_now[2], raw_data=radar_fetch.result())
+radar_data, radar_lat, radar_lon, radar_time = radar_fetch.result()
 
 # placeholder so the figure still builds (footer says NO METARs) if the metar fetch fails
 metar_time = None
@@ -1120,10 +1121,8 @@ plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 
-# plot nexrad mosaic
-# thin the 1km mosaic 2x -- still about one cell per output pixel, but 4x fewer cells to draw
-thin = 2
-pm = ax.pcolormesh(radar_lon[::thin, ::thin]+0.05, radar_lat[::thin, ::thin]+0.05, radar_data[::thin, ::thin],
+# plot MRMS mosaic (already thinned 2x by get_latest_mrms -- still about one cell per output pixel)
+pm = ax.pcolormesh(radar_lon, radar_lat, radar_data,
               vmin=-15, vmax=95, cmap=rs_expertreflect_cmap, alpha=0.8, zorder=1.3, transform=ccrs.PlateCarree())
 
 

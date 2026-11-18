@@ -74,7 +74,9 @@ def get_latest_mosaic(year, month, day, raw_data=None):
 
 
 
-def get_latest_mrms(north=60, south=10, west=-125, east=-50):
+def get_latest_mrms(north=60, south=10, west=-125, east=-50, stride=1):
+    # stride > 1 keeps every Nth grid point, e.g. stride=2 for a CONUS map where the
+    # ~1 km grid is finer than the output pixels (also 4x less memory)
 
     # MRMS QC Composite Reflectivity
     url = ("https://mrms.ncep.noaa.gov/2D/MergedReflectivityQCComposite/MRMS_MergedReflectivityQCComposite.latest.grib2.gz")
@@ -120,8 +122,8 @@ def get_latest_mrms(north=60, south=10, west=-125, east=-50):
             r0, r1 = rows.min(), rows.max() + 1
             c0, c1 = cols.min(), cols.max() + 1
 
-            dBz = dBz[r0:r1, c0:c1]
-            radar_lon, radar_lat = np.meshgrid(lons_1d[c0:c1], lats_1d[r0:r1])
+            dBz = dBz[r0:r1:stride, c0:c1:stride]
+            radar_lon, radar_lat = np.meshgrid(lons_1d[c0:c1:stride], lats_1d[r0:r1:stride])
 
             # Extract radar valid time
             time = grb.validDate.replace(tzinfo=timezone.utc)

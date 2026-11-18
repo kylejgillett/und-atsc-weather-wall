@@ -169,7 +169,7 @@ def map_builder(
 def project_grid(ax, lons, lats):
     """
     Project a lat/lon grid into the map's projection.
-
+ 
     Contouring the projected x/y with transform=ax.projection lets
     matplotlib build contours directly in map space, so cartopy does
     not have to reproject every contour polygon. That reprojection is
