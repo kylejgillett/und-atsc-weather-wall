@@ -60,3 +60,28 @@ TSTM_COLOR = "#F2C14E"
 POP_COLOR = "#6F726B"
 WX_COLOR = "#7A7466"
 SKY_COLOR = "#C9CCC4"
+
+# sounding background: between SounderPy's dark default (#161616) and FIGURE_BG, for more contrast
+SOUNDING_BG = "#1C1D1B"
+
+# sounding temperature: a true red (TEMP_COLOR is coral) that stays bright on SOUNDING_BG
+SOUNDING_TEMP_COLOR = "#F0453A"
+
+# SounderPy theme for the sounding figures, matching the Weather Wall maps
+# (passed as build_sounding/build_composite(theme=...), also used by the winter sounding)
+SOUNDING_THEME = {"text": TEXT_PRIMARY, "background": SOUNDING_BG, "border": UND_GREEN,
+                  "marker": TEXT_PRIMARY, "barb": WIND_COLOR,
+                  "adiabat": UND_GREEN, "skew_line": TEXT_MUTED, "isotherm": FREEZE_COLOR,
+                  "shade": TEXT_MUTED, "pressure_line": GRID_COLOR,
+                  "temperature": SOUNDING_TEMP_COLOR, "virtual": "#A8352D", "warm": SOUNDING_TEMP_COLOR,
+                  "parcel": {"sb": HIGH_COLOR, "ml": GUST_COLOR, "mu": WIND_FILL_COLOR},
+                  "special_parcel": TEXT_SECONDARY, "secondary_parcel": TEXT_MUTED,
+                  "height_marker": TEXT_PRIMARY, "height_marker_edge": SOUNDING_BG,
+                  "moisture": DEWP_COLOR, "moisture_strong": "#8FE388",
+                  "composite_index": HIGH_COLOR,
+                  "bar_edge": COLORBAR_EDGE, "watermark": TEXT_SECONDARY}
+
+# SounderPy watermark text for the sounding figures (logo path is set in each builder)
+SOUNDING_WATERMARK = {"title": "UND Atmospheric Science • Weather Map Wall",
+                      "subtitle": "in the Leon F. Osborne Weather Center • Built by SounderPy (Gillett 2024)",
+                      "alpha": 0.9}

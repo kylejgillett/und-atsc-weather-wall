@@ -24,6 +24,11 @@ project_root = os.path.abspath(os.path.join(script_dir, ".."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 from utils.utils import *
+from utils.style import *
+import matplotlib.pyplot as plt
+
+# Weather Wall watermark and UND logo on every sounding figure
+spy.set_watermark(**SOUNDING_WATERMARK, logo=os.path.join(project_root, "utils", "images", "und-logo.png"))
 
     
 
@@ -62,8 +67,10 @@ for id, i in zip(ids, range(3,len(ids)+3)):
         #snd_dt = datetime(int(snd_date[0]), int(snd_date[1]), int(snd_date[2]), int(snd_date[3]), tzinfo=timezone.utc)
         obs_filename = build_filename("staged_figures/soundings/", "sounding", set_date, variant=f"{i:02d}-obs-{id}")
 
-        spy.build_sounding(data, special_parcels='simple', dark_mode=True, map_zoom=1, color_blind=True, radar='mosaic',
-                    save=True, filename=obs_filename)
+        # grid.color mutes the skew-t grid lines (the theme doesn't cover them)
+        with plt.rc_context({"grid.color": GRID_COLOR}):
+            spy.build_sounding(data, special_parcels='simple', dark_mode=True, map_zoom=1, color_blind=True, radar='mosaic', mode='auto',
+                               theme=SOUNDING_THEME, save=True, filename=obs_filename)
     except:
         print(f"    !!! NO DATA FOUND FOR {id.upper()}")
 

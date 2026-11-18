@@ -25,6 +25,11 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from utils.utils import *
+from utils.style import *
+import matplotlib.pyplot as plt
+
+# Weather Wall watermark and UND logo on every sounding figure
+spy.set_watermark(**SOUNDING_WATERMARK, logo=os.path.join(project_root, "utils", "images", "und-logo.png"))
 
 
 utc_now = datetime.now(timezone.utc)
@@ -54,8 +59,10 @@ snd_dt = datetime(int(snd_date[0]), int(snd_date[1]), int(snd_date[2]), int(snd_
 
 analysis_filename = build_filename("staged_figures/soundings/", "sounding", set_date, variant="01-anl-kgfk")
 
-spy.build_sounding(gfk_data, special_parcels='simple', dark_mode=True, map_zoom=1, color_blind=True, radar='mosaic',
-                   save=True, filename=analysis_filename)
+# grid.color mutes the skew-t grid lines (the theme doesn't cover them)
+with plt.rc_context({"grid.color": GRID_COLOR}):
+    spy.build_sounding(gfk_data, special_parcels='simple', dark_mode=True, map_zoom=1, color_blind=True, radar='mosaic', mode='auto',
+                       theme=SOUNDING_THEME, save=True, filename=analysis_filename)
 print("    FINISHED GFK BUFKIT SOUNDING")
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -89,8 +96,9 @@ snd_dt = datetime(int(snd_date[0]), int(snd_date[1]), int(snd_date[2]), int(snd_
 
 composite_filename = build_filename("staged_figures/soundings/", f"sounding", set_date, variant='02-cmp-kgfk')
 
-spy.build_composite(datas, cmap='viridis', dark_mode=True, lw_to_use=[4 for data in datas], alphas_to_use=[1, 0.9, 0.8, 0.7, 0.6][::-1],
-                   save=True, filename=composite_filename)
+with plt.rc_context({"grid.color": GRID_COLOR}):
+    spy.build_composite(datas, cmap='viridis', dark_mode=True, lw_to_use=[4 for data in datas], alphas_to_use=[1, 0.9, 0.8, 0.7, 0.6][::-1],
+                        theme=SOUNDING_THEME, save=True, filename=composite_filename)
 
 
 print("    FINISHED GFK EVOLUTION COMPOSITE SOUNDING")
