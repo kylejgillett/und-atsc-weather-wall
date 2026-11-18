@@ -78,7 +78,7 @@ box_size = 1.8
 fig, ax = map_builder(extent=[center_lon-box_size, center_lon+box_size, center_lat-box_size, center_lat+box_size], projection=ccrs.Mercator(),
                       counties=True, map_scale="10m", county_scale="5m", county_alpha=1, county_width=1.5,
                       roads=True, road_alpha=0.5, road_color='navy', road_type="local", 
-                      satellite=True)
+                      satellite=True, dpi=150)  # full wall width (2160 px)
 
 
 # placeholder so the figure still builds (says NO METARs) if the metar fetch fails

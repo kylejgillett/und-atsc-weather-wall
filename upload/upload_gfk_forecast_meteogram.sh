@@ -12,6 +12,9 @@ rm -f "$STAGE_DIR"/gfk_forecast_meteogram*.png
 
 python "$BUILD_SCRIPT"
 
+# Shrink the PNGs before upload (256-color palette, no visible change)
+python utils/compress_figures.py "$STAGE_DIR"/*.png
+
 
 # Find newest generated image
 FILE=$(ls -1 "$STAGE_DIR"/gfk_forecast_meteogram_*.png | sort | tail -1)

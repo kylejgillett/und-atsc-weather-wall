@@ -14,6 +14,9 @@ rm -f "$STAGE_DIR"/sounding_*_[0-9][0-9]-obs-*.png
 # Build new observed sounding graphics
 python "$BUILD_SCRIPT"
 
+# Shrink the PNGs before upload (256-color palette, no visible change)
+python utils/compress_figures.py "$STAGE_DIR"/*.png
+
 DELETE_DONE=false
 
 # Upload observed soundings in loop order

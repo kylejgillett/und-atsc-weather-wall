@@ -89,7 +89,7 @@ def map_builder(
     extent=CONUS_EXTENT,
     projection=None,
     figsize=(15, 10),
-    dpi=150,
+    dpi=100,  # 1500x1000 px: maps show two-across on the 4K wall (~1080 px each)
     terrain=True,
     terrain_alpha=0.55,
     terrain_zoom=4,

@@ -14,6 +14,9 @@ rm -f "$STAGE_DIR"/asos_timeseries_*.png
 # Build new ASOS graphics
 python "$BUILD_SCRIPT"
 
+# Shrink the PNGs before upload (256-color palette, no visible change)
+python utils/compress_figures.py "$STAGE_DIR"/*.png
+
 # Upload ASOS graphics in loop order
 for FILE in "$STAGE_DIR"/asos_timeseries_*_[0-9][0-9]-*.png; do
 

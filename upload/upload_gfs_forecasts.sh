@@ -14,6 +14,9 @@ rm -f "$STAGE_DIR"/gfs_*.png
 # Build new GFS graphics
 echo "Building GFS graphics..."
 python "$BUILD_SCRIPT"
+
+# Shrink the PNGs before upload (256-color palette, no visible change)
+python utils/compress_figures.py "$STAGE_DIR"/*.png
 echo "GFS build finished."
 
 DELETE_DONE=false

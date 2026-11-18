@@ -13,6 +13,9 @@ rm -f "$STAGE_DIR"/hrrr_forecast_*.png
 #Build new HRRR forecast
 python "$BUILD_SCRIPT"
 
+# Shrink the PNGs before upload (256-color palette, no visible change)
+python utils/compress_figures.py "$STAGE_DIR"/*.png
+
 # Find HRRR forecast files
 FILES=$(ls -1 "$STAGE_DIR"/hrrr_forecast_*.png | sort)
 

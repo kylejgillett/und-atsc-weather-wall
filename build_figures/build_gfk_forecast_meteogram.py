@@ -200,7 +200,7 @@ print(f"    GEFS 7-DAY QPF.....MEDIAN {qpf_stats['p50'].iloc[-1]:.2f} IN, "
 ###########################
 # BUILD FIGURE
 ###########################
-fig = plt.figure(figsize=(14, 5.2), dpi=250, facecolor=FIGURE_BG)
+fig = plt.figure(figsize=(14, 5.2), dpi=155, facecolor=FIGURE_BG)  # ~2160 px: full wall width
 
 # define all axes: temperature, a thin wind / sky / weather / PoP strip, and cumulative QPF
 ax1 = fig.add_axes([AX_LEFT, 0.474, AX_WIDTH, 0.311])

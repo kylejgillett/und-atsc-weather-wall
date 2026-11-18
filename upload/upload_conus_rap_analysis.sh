@@ -14,6 +14,9 @@ rm -f "$STAGE_DIR"/conus_analysis_*.png
 # Build new CONUS RAP graphics
 python "$BUILD_SCRIPT"
 
+# Shrink the PNGs before upload (256-color palette, no visible change)
+python utils/compress_figures.py "$STAGE_DIR"/*.png
+
 # Upload CONUS RAP graphics in map order
 for FILE in "$STAGE_DIR"/conus_analysis_*.png; do
 

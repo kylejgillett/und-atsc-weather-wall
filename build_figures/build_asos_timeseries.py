@@ -134,7 +134,7 @@ for id_num, station_id in enumerate(stations):
 
 
     # build figure
-    fig = plt.figure(figsize=(16, 10), dpi=250, facecolor=FIGURE_BG)
+    fig = plt.figure(figsize=(16, 10), dpi=135, facecolor=FIGURE_BG)  # 2160 px: full wall width
 
     # define all axes
     ax1 = fig.add_axes([0.055, 0.590, 0.890, 0.235])

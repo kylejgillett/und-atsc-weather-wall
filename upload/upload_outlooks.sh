@@ -14,6 +14,9 @@ rm -f "$STAGE_DIR"/outlook_*.png
 # Build new outlook graphics
 python "$BUILD_SCRIPT"
 
+# Shrink the PNGs before upload (256-color palette, no visible change)
+python utils/compress_figures.py "$STAGE_DIR"/*.png
+
 # Upload outlook graphics
 for FILE in "$STAGE_DIR"/outlook_*_[0-9][0-9]-*.png; do
 
