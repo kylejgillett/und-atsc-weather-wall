@@ -3,6 +3,8 @@ Description=Weather Wall GFS Forecasts
 
 [Service]
 Type=oneshot
+# kill the run if it hangs (e.g. a stalled download) so the next scheduled run isn't skipped
+TimeoutStartSec=45min
 WorkingDirectory=%h/und-atsc-weather-wall
 ExecStart=%h/und-atsc-weather-wall/upload/run_job.sh upload_gfs_forecasts.sh upload_gfk_forecast_meteogram.sh
 StandardOutput=append:%h/weather_wall_logs/gfs_forecasts.log

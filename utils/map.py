@@ -9,6 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 import sys
 import os
+import numpy as np
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
@@ -162,3 +163,26 @@ def map_builder(
     geo_spine.set_zorder(20)
 
     return fig, ax
+
+
+
+def project_grid(ax, lons, lats):
+    """
+    Project a lat/lon grid into the map's projection.
+
+    Contouring the projected x/y with transform=ax.projection lets
+    matplotlib build contours directly in map space, so cartopy does
+    not have to reproject every contour polygon. That reprojection is
+    very slow for big domains and patchy fields (e.g. precip type).
+    """
+
+    lons = np.asarray(lons)
+    lats = np.asarray(lats)
+
+    # 1D model coords -> 2D grid
+    if lons.ndim == 1 and lats.ndim == 1:
+        lons, lats = np.meshgrid(lons, lats)
+
+    xyz = ax.projection.transform_points(DATA_CRS, lons, lats)
+
+    return xyz[..., 0], xyz[..., 1]

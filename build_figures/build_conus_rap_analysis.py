@@ -24,6 +24,7 @@ import numpy as np
 import sys
 import os
 import xarray as xr
+from concurrent.futures import ThreadPoolExecutor
 import goes2go
 
 
@@ -42,9 +43,9 @@ from utils.colormaps import *
 from get_data.get_metars import get_metar_data
 from get_data.get_rap_data import analysis
 from get_data.get_goes_from_aws import download_goes19_visible, subset_goes_to_map
-from get_data.get_radar_mosaic import get_latest_mosaic
+from get_data.get_radar_mosaic import get_latest_mosaic, fetch_latest_mosaic
 from get_data.get_wpc_bulletin import plot_bulletin
-from utils.map import map_builder
+from utils.map import map_builder, project_grid
 from utils.figure import figure_builder
 from utils.hodograph import add_hodograph_network
 
@@ -78,6 +79,14 @@ south = center_lat - box_size
 north = center_lat + box_size
 
 projection = ccrs.LambertConformal(central_longitude=-95.0, central_latitude=25.0, standard_parallels=(25.0, 25.0))
+
+# start the radar, metar, and satellite downloads in the background
+# while the rap data loads. only downloads run in these threads -- all
+# NetCDF/HDF5 files are opened on the main thread (HDF5 is not thread-safe)
+fetch_pool = ThreadPoolExecutor(max_workers=3)
+radar_fetch = fetch_pool.submit(fetch_latest_mosaic, utc_now[0], utc_now[1], utc_now[2])
+metar_fetch = fetch_pool.submit(get_metar_data, reduced_to=150000)
+sat_fetch = fetch_pool.submit(download_goes19_visible, utc_now[0], utc_now[4], utc_now[3], sector='FULLDISK')
 
 # pull rap data
 raw_data = analysis(box_size=box_size)
@@ -150,7 +159,7 @@ cin_ml  = ndimage.gaussian_filter(raw_data.variables['Convective_inhibition_pres
 fgen = mpcalc.frontogenesis(raw_data['Temperature_isobaric'], 
                             raw_data['u-component_of_wind_isobaric'],
                             raw_data['v-component_of_wind_isobaric'],
-                            latitude=raw_data['lon'].values,longitude=raw_data['lon'].values,crs=ccrs.PlateCarree())
+                            latitude=raw_data['lat'].values,longitude=raw_data['lon'].values,crs=ccrs.PlateCarree())
 # convert units to delta deg C / 100 km / 3 hr
 fgen = fgen.metpy.convert_units('delta_degC/km/hour')*3*100
 # create `fgen_masked`, a DataArray of fgen values >2, all else are Nan
@@ -202,11 +211,14 @@ adv = ndimage.gaussian_filter(adv, sigma=2, order=0) * units('K/sec')
 ############################################################################################################################################################################
 ############################################################################################################################################################################
 # get radar mosaic data
-radar_data, radar_lat, radar_lon, radar_time = get_latest_mosaic(utc_now[0], utc_now[1], utc_now[2])
+radar_data, radar_lat, radar_lon, radar_time = get_latest_mosaic(utc_now[0], utc_now[1], utc_now[2], raw_data=radar_fetch.result())
+
+# placeholder so the figure still builds (footer says NO METARs) if the metar fetch fails
+metar_time = None
 
 try:
     # get metar data
-    metar_obs, metar_time = get_metar_data(reduced_to=150000)
+    metar_obs, metar_time = metar_fetch.result()
     metar_obs['air_temperature'] = (metar_obs['air_temperature']* 9/5) + 32
     metar_obs['dew_point_temperature'] = (metar_obs['dew_point_temperature']* 9/5) + 32
     bad_metar = (metar_obs['air_temperature'] < -100) | (metar_obs['dew_point_temperature'] < -100)
@@ -215,14 +227,38 @@ try:
 except:
     pass
 
-# get satellite data
-sat_file = download_goes19_visible(utc_now[0], utc_now[4], utc_now[3], sector='FULLDISK')
-xrds_sat = xr.open_dataset(sat_file,  engine="h5netcdf")
-sat_valid = datetime.fromisoformat(xrds_sat.time_coverage_start.replace("Z", "+00:00"))
+# get satellite data. if GOES is unavailable the map is still built without it (footer
+# says NO GOES), and the file is closed and deleted once the subset is in memory, even on errors
 sat_type = "GOES-19 Band 02 Visible"
-sat_valid_str = sat_valid.strftime("%Y-%m-%d %H:%MZ")
-sat_time_str = sat_valid.strftime("%H:%MZ")
-visible, sat_crs, sat_extent = subset_goes_to_map(xrds_sat, west-30, east+30, south-20, north+20, pad_km=500, stride=10)
+sat_time_str = "NO"
+visible = None
+try:
+    sat_file = sat_fetch.result()
+except Exception as e:
+    print(f"    GOES DOWNLOAD FAILED -- {e}")
+    sat_file = None
+
+if sat_file is not None:
+    xrds_sat = None
+    try:
+        xrds_sat = xr.open_dataset(sat_file,  engine="h5netcdf")
+        sat_valid = datetime.fromisoformat(xrds_sat.time_coverage_start.replace("Z", "+00:00"))
+        visible, sat_crs, sat_extent = subset_goes_to_map(xrds_sat, west-30, east+30, south-20, north+20, pad_km=500, stride=10)
+        visible = visible.load()
+        sat_time_str = sat_valid.strftime("%H:%MZ")
+    except Exception as e:
+        print(f"    GOES SATELLITE FAILED -- {e}")
+        visible = None
+    finally:
+        if xrds_sat is not None:
+            xrds_sat.close()
+        # remove temporary GOES file after use
+        try:
+            os.remove(sat_file)
+            print(f"    GOES TEMP FILE REMOVED.....{os.path.basename(sat_file)}")
+        except OSError as e:
+            print(f"    WARNING: Could not remove GOES temp file: {e}")
+fetch_pool.shutdown()
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 #############################################################################################################################################################################
@@ -239,6 +275,9 @@ visible, sat_crs, sat_extent = subset_goes_to_map(xrds_sat, west-30, east+30, so
 #################################
 fig, ax = map_builder(projection=projection, extent=[-119, -75, 23.5, 53], terrain=True, terrain_zoom=6, state_color='navy', border_color='navy')
 
+# project lat/lon grid to map coords for fast contouring
+x, y = project_grid(ax, lons, lats)
+
 # slice data
 plev300 = np.where(pres_levs == 300)[0][0]
 ghgt_300 = ghgt_iso[plev300]
@@ -247,15 +286,15 @@ vwnd_300 = vwnd_iso[plev300]
 wdsp_300 = np.sqrt(uwnd_300**2 + vwnd_300**2)
 
 # plot 300 hpa heights
-contour = ax.contour(lons, lats, ghgt_300, np.arange(0, 12000, 120),
+contour = ax.contour(x, y, ghgt_300, np.arange(0, 12000, 120),
                 colors='black', linewidths=3.0, linestyles='-',
-                transform=ccrs.PlateCarree(), zorder=11)
+                transform=ax.projection, zorder=11)
 plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 # plot 300 hpa wind speed
-contourf = ax.contourf(lons, lats, wdsp_300, np.arange(50, 160, 5), extend='max',
-                 cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
+contourf = ax.contourf(x, y, wdsp_300, np.arange(50, 160, 5), extend='max',
+                 cmap=wdsp_cmap, alpha=0.7, transform=ax.projection, zorder=4)
 
 # plot 300 hpa wind barbs
 every = 20
@@ -370,6 +409,9 @@ plt.close(fig)
 #################################
 fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
+# project lat/lon grid to map coords for fast contouring
+x, y = project_grid(ax, lons, lats)
+
 # slice data 
 plev500 = np.where(pres_levs == 500)[0][0]
 ghgt_500 = ghgt_iso[plev500]
@@ -379,15 +421,15 @@ wdsp_500 = np.sqrt(uwnd_500**2 + vwnd_500**2)
 
 
 # plot 500 hpa heights
-contour = ax.contour(lons, lats, ghgt_500, np.arange(3000, 7000, 60),
+contour = ax.contour(x, y, ghgt_500, np.arange(3000, 7000, 60),
                 colors='black', linewidths=3.0, linestyles='-',
-                transform=ccrs.PlateCarree(), zorder=11)
+                transform=ax.projection, zorder=11)
 plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 # plot 500hpa wind speed
-contourf = ax.contourf(lons, lats, wdsp_500, np.arange(30, 140, 5), extend='max',
-                 cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
+contourf = ax.contourf(x, y, wdsp_500, np.arange(30, 140, 5), extend='max',
+                 cmap=wdsp_cmap, alpha=0.7, transform=ax.projection, zorder=4)
 
 # plot 500 hpa wind barbs
 every = 20
@@ -432,6 +474,9 @@ plt.close(fig)
 #################################
 fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=False, state_color='navy', border_color='navy', border_factor=1.5)
 
+# project lat/lon grid to map coords for fast contouring
+x, y = project_grid(ax, lons, lats)
+
 n_reps = 150
 
 # compute vorticity and vorticity advection
@@ -440,16 +485,16 @@ f = mpcalc.coriolis_parameter(np.deg2rad(lats)).to('1/s')
 vor_500 = mpcalc.smooth_n_point(mpcalc.vorticity(uwnd_500*units.kts, vwnd_500*units.kts, dx=dx, dy=dy), 9, n_reps)
 
 # plot 500 hpa heights
-contour = ax.contour(lons, lats, ghgt_500, np.arange(3000, 7000, 60),
+contour = ax.contour(x, y, ghgt_500, np.arange(3000, 7000, 60),
                 colors='black', linewidths=3.0, linestyles='-',
-                transform=ccrs.PlateCarree(), zorder=11)
+                transform=ax.projection, zorder=11)
 plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 # plot relative vorticity fill
 norm = mcolors.TwoSlopeNorm(vmin=-30, vcenter=0, vmax=50)
-contourf = ax.contourf(lons, lats, vor_500 * 10**5, np.arange(-30, 52, 2), 
-                      norm=norm, extend='both', cmap='PuOr_r', zorder=5, alpha=1, transform=ccrs.PlateCarree())
+contourf = ax.contourf(x, y, vor_500 * 10**5, np.arange(-30, 52, 2), 
+                      norm=norm, extend='both', cmap='PuOr_r', zorder=5, alpha=1, transform=ax.projection)
 
 # plot wind barbs
 every = 20
@@ -557,6 +602,9 @@ plt.close(fig)
 #################################
 fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=False, state_color='navy', border_color='navy', border_factor=1.5)
 
+# project lat/lon grid to map coords for fast contouring
+x, y = project_grid(ax, lons, lats)
+
 # slice data
 plev700 = np.where(pres_levs == 700)[0][0]
 ghgt_700 = ghgt_iso[plev700]
@@ -567,22 +615,22 @@ wdsp_700 = np.sqrt(uwnd_700**2 + vwnd_700**2)
 
 
 # plot 700 hpa heights
-contour = ax.contour(lons, lats, ghgt_700, np.arange(1800, 4000, 30),
+contour = ax.contour(x, y, ghgt_700, np.arange(1800, 4000, 30),
                 colors='black', linewidths=3.0, linestyles='-',
-                transform=ccrs.PlateCarree(), zorder=11)
+                transform=ax.projection, zorder=11)
 plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 # plot 0C isotherm
-ax.contour(lons, lats, temp_700, levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
+ax.contour(x, y, temp_700, levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ax.projection, zorder=5)  
 
-tmpcs = ax.contour(lons, lats, temp_700, levels=[6, 8, 10, 12, 14, 16, 18], linewidths=1, linestyles='--', colors='k', transform=ccrs.PlateCarree(), zorder=5)  
+tmpcs = ax.contour(x, y, temp_700, levels=[6, 8, 10, 12, 14, 16, 18], linewidths=1, linestyles='--', colors='k', transform=ax.projection, zorder=5)  
 plt.clabel(tmpcs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 # plot 700hpa temperature fill
-contourf = ax.contourf(lons, lats, temp_700, np.arange(-40, 42, 1), extent='both',
-                 cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
+contourf = ax.contourf(x, y, temp_700, np.arange(-40, 42, 1), extend='both',
+                 cmap=temp_cmap, alpha=1, transform=ax.projection, zorder=4)
 
 # plot 700hpa wind barbs
 every = 15
@@ -627,6 +675,9 @@ plt.close(fig)
 #################################
 fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
+# project lat/lon grid to map coords for fast contouring
+x, y = project_grid(ax, lons, lats)
+
 # slice data
 plev850 = np.where(pres_levs == 850)[0][0]
 ghgt_850 = ghgt_iso[plev850]
@@ -636,15 +687,15 @@ temp_850 = temp_iso[plev850]
 wdsp_850 = np.sqrt(uwnd_850**2 + vwnd_850**2)
 
 # plot 850 hpa heights
-contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
+contour = ax.contour(x, y, ghgt_850, np.arange(0, 1700, 30),
                 colors='black', linewidths=3.0, linestyles='-',
-                transform=ccrs.PlateCarree(), zorder=11)
+                transform=ax.projection, zorder=11)
 plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 # plot 850 wind speed fill
-contourf = ax.contourf(lons, lats, wdsp_850, np.arange(20, 85, 5), extend='max',
-                            cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
+contourf = ax.contourf(x, y, wdsp_850, np.arange(20, 85, 5), extend='max',
+                            cmap=wdsp_cmap, alpha=0.7, transform=ax.projection, zorder=4)
 
 
 # plot 850hpa wind barbs
@@ -689,19 +740,22 @@ plt.close(fig)
 #################################
 fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=False, state_color='navy', border_color='navy', border_factor=1.5)
 
+# project lat/lon grid to map coords for fast contouring
+x, y = project_grid(ax, lons, lats)
+
 # plot 850 hpa heights
-contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
+contour = ax.contour(x, y, ghgt_850, np.arange(0, 1700, 30),
                 colors='black', linewidths=3.0, linestyles='-',
-                transform=ccrs.PlateCarree(), zorder=11)
+                transform=ax.projection, zorder=11)
 plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 # plot 0C isotherm
-ax.contour(lons, lats, temp_850, levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
+ax.contour(x, y, temp_850, levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ax.projection, zorder=5)  
 
 # plot 850hpa temperature fill
-contourf = ax.contourf(lons, lats, temp_850, np.arange(-40, 42, 1), extent='both',
-                 cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
+contourf = ax.contourf(x, y, temp_850, np.arange(-40, 42, 1), extend='both',
+                 cmap=temp_cmap, alpha=1, transform=ax.projection, zorder=4)
 
 # plot 850hpa wind barbs
 every = 15
@@ -746,6 +800,9 @@ plt.close(fig)
 try:
     fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=False, state_color='navy', border_color='navy', border_factor=1.5)
 
+    # project lat/lon grid to map coords for fast contouring
+    x, y = project_grid(ax, lons, lats)
+
     # slice data
     plev850 = np.where(pres_levs == 850)[0][0]
     ghgt_850 = ghgt_iso[plev850]
@@ -755,9 +812,9 @@ try:
     wdsp_850 = np.sqrt(uwnd_850**2 + vwnd_850**2)
 
     # plot 850hpa heights
-    contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
+    contour = ax.contour(x, y, ghgt_850, np.arange(0, 1700, 30),
                     colors='black', linewidths=3.0, linestyles='-',
-                    transform=ccrs.PlateCarree(), zorder=11)
+                    transform=ax.projection, zorder=11)
     plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
             rightside_up=True, use_clabeltext=True)
 
@@ -765,16 +822,16 @@ try:
 
     n_reps = 80
     # plot 850hpa tadv
-    contourf = ax.contourf(raw_data['lon'], raw_data['lat'], 3*(mpcalc.smooth_n_point(adv[0,plev850,:,:], 9, n_reps)),
-                    np.arange(-7,7.25,0.25), cmap='bwr', transform=ccrs.PlateCarree(), zorder=4, extend='both')
+    contourf = ax.contourf(x, y, 3*(mpcalc.smooth_n_point(adv[0,plev850,:,:], 9, n_reps)),
+                    np.arange(-7,7.25,0.25), cmap='bwr', transform=ax.projection, zorder=4, extend='both')
 
-    ax.contour(lons, lats, temp_850, levels=[0], linewidths=3, linestyles='--', colors='gray', transform=ccrs.PlateCarree(), zorder=5)  
+    ax.contour(x, y, temp_850, levels=[0], linewidths=3, linestyles='--', colors='gray', transform=ax.projection, zorder=5)  
 
     # plot frontogenesis hatch (> 2 degC / 100km / 3hr)
     fgen_hatch = np.where(fgen_masked[0,plev850,:,:].values >= 2, 1, np.nan)
-    ax.contourf(raw_data['lon'], raw_data['lat'], fgen_hatch,
+    ax.contourf(x, y, fgen_hatch,
                 levels=[0.5, 1.5], colors='none', hatches=['////'], alpha=0,
-                transform=ccrs.PlateCarree(), zorder=6)
+                transform=ax.projection, zorder=6)
 
     # plot 850hpa wind barbs
     every = 15
@@ -823,18 +880,21 @@ except TypeError as e:
 #################################
 fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=False, state_color='navy', border_color='navy', border_factor=1.5)
 
+# project lat/lon grid to map coords for fast contouring
+x, y = project_grid(ax, lons, lats)
+
 
 # plot mslp
-cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
+cs = ax.contour(x, y, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
                 linewidths=3.0, linestyles='-',
-                transform=ccrs.PlateCarree(), zorder=11)
+                transform=ax.projection, zorder=11)
 plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
-ax.contour(lons, lats, c2f(temp_sfc[0,:,:]), levels=[32], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
+ax.contour(x, y, c2f(temp_sfc[0,:,:]), levels=[32], linewidths=3, linestyles='--', colors='cyan', transform=ax.projection, zorder=5)  
 
-contourf = ax.contourf(lons, lats, c2f(temp_sfc[0,:,:]), np.arange(-60, 121, 1), extent='both',
-                 cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
+contourf = ax.contourf(x, y, c2f(temp_sfc[0,:,:]), np.arange(-60, 121, 1), extend='both',
+                 cmap=temp_cmap, alpha=1, transform=ax.projection, zorder=4)
 
 # plot  wind barbs
 every = 15
@@ -874,23 +934,26 @@ plt.close(fig)
 #################################
 fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=False, state_color='navy', border_color='navy', border_factor=1.5)
 
+# project lat/lon grid to map coords for fast contouring
+x, y = project_grid(ax, lons, lats)
+
 
 # plot mslp
-cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
+cs = ax.contour(x, y, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
                 linewidths=3.0, linestyles='-',
-                transform=ccrs.PlateCarree(), zorder=11)
+                transform=ax.projection, zorder=11)
 plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
-dpcs = ax.contour(lons, lats, c2f(dwpt_sfc[0,:,:]), levels=[45, 50, 55, 60, 65, 70, 75], colors='k',
-           linewidths=1, linestyles='--', transform=ccrs.PlateCarree(), zorder=5)  
+dpcs = ax.contour(x, y, c2f(dwpt_sfc[0,:,:]), levels=[45, 50, 55, 60, 65, 70, 75], colors='k',
+           linewidths=1, linestyles='--', transform=ax.projection, zorder=5)  
 plt.clabel(dpcs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 levels = np.arange(-40, 85, 5)
 norm = Normalize(vmin=-50, vmax=100)
-contourf = ax.contourf(lons, lats, c2f(dwpt_sfc[0,:,:]), levels, norm=norm, extend='both',
-                 cmap=dwpt_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
+contourf = ax.contourf(x, y, c2f(dwpt_sfc[0,:,:]), levels, norm=norm, extend='both',
+                 cmap=dwpt_cmap, alpha=1, transform=ax.projection, zorder=4)
 
 # plot  wind barbs
 every = 15
@@ -933,6 +996,9 @@ plt.close(fig)
 #################################
 fig, ax = map_builder(projection=projection, extent=[-119, -74.5, 23.5, 53], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
+# project lat/lon grid to map coords for fast contouring
+x, y = project_grid(ax, lons, lats)
+
 
 # ADD HODOGRAPHS
 hodo_axes = add_hodograph_network(ax=ax, raw_data=raw_data, lons=lons, lats=lats, cape=cape_ml,
@@ -940,16 +1006,16 @@ hodo_axes = add_hodograph_network(ax=ax, raw_data=raw_data, lons=lons, lats=lats
 
 
 # plot mslp
-cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
+cs = ax.contour(x, y, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
                 linewidths=2, linestyles='-',
-                transform=ccrs.PlateCarree(), alpha=1, zorder=11)
+                transform=ax.projection, alpha=1, zorder=11)
 plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 
 
-contourf = ax.contourf(lons, lats, cape_ml, levels=np.arange(100, 5000, 100), extend='max',
-                 cmap=cape_cmap, transform=ccrs.PlateCarree(), alpha=0.4, zorder=4)
+contourf = ax.contourf(x, y, cape_ml, levels=np.arange(100, 5000, 100), extend='max',
+                 cmap=cape_cmap, transform=ax.projection, alpha=0.4, zorder=4)
 
 
 
@@ -974,8 +1040,8 @@ contourf = ax.contourf(lons, lats, cape_ml, levels=np.arange(100, 5000, 100), ex
 import matplotlib as mpl
 mpl.rcParams['hatch.linewidth'] = 0.3
 cin_hatch = np.where(cin_ml[:,:] < -40, 1, np.nan)
-ax.contourf(lons, lats, cin_hatch, levels=[0.5, 1.5], colors='none', hatches=['////'],
-    edgecolors='red', linewidths=0.05, transform=ccrs.PlateCarree(), zorder=13, alpha=0)
+ax.contourf(x, y, cin_hatch, levels=[0.5, 1.5], colors='none', hatches=['////'],
+    edgecolors='red', linewidths=0.05, transform=ax.projection, zorder=13, alpha=0)
 
 composite_filename = build_filename("staged_figures/conus_rap_analysis/", f"conus_analysis", now_utc, variant='000c')
 
@@ -1010,6 +1076,9 @@ plt.close(fig)
 # SURFACE OBS MAP
 #################################
 fig, ax = map_builder(projection=projection, extent=[-118, -74, 24, 52], terrain=True, state_color='white', border_color='white')
+
+# project lat/lon grid to map coords for fast contouring
+x, y = project_grid(ax, lons, lats)
 ax.set_extent([-118, -74, 24, 52],crs=ccrs.PlateCarree())
 
 
@@ -1017,16 +1086,10 @@ ax.set_extent([-118, -74, 24, 52],crs=ccrs.PlateCarree())
 # SATELLITE
 ###################################################################
 fig.canvas.draw()
-sat_data = np.ma.masked_invalid(visible.values)
-ax.imshow(sat_data, origin="upper", extent=sat_extent, transform=sat_crs, cmap="gray",
-          norm=PowerNorm(gamma=0.55, vmin=0.0, vmax=1.1), interpolation="nearest", regrid_shape=1200, alpha=0.85, zorder=1)
-xrds_sat.close()
-# remove temporary GOES file after use
-try:
-    os.remove(sat_file)
-    print(f"    GOES TEMP FILE REMOVED.....{os.path.basename(sat_file)}")
-except OSError as e:
-    print(f"    WARNING: Could not remove GOES temp file: {e}")
+if visible is not None:
+    sat_data = np.ma.masked_invalid(visible.values)
+    ax.imshow(sat_data, origin="upper", extent=sat_extent, transform=sat_crs, cmap="gray",
+              norm=PowerNorm(gamma=0.55, vmin=0.0, vmax=1.1), interpolation="nearest", regrid_shape=1200, alpha=0.85, zorder=1)
 
 
 try:
@@ -1050,15 +1113,17 @@ except:
 
 
 # plot mslp
-cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
+cs = ax.contour(x, y, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
                 linewidths=2.0, linestyles='-',
-                transform=ccrs.PlateCarree(), zorder=11)
+                transform=ax.projection, zorder=11)
 plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
            rightside_up=True, use_clabeltext=True)
 
 
 # plot nexrad mosaic
-pm = ax.pcolormesh(radar_lon+0.05, radar_lat+0.05, radar_data,
+# thin the 1km mosaic 2x -- still about one cell per output pixel, but 4x fewer cells to draw
+thin = 2
+pm = ax.pcolormesh(radar_lon[::thin, ::thin]+0.05, radar_lat[::thin, ::thin]+0.05, radar_data[::thin, ::thin],
               vmin=-15, vmax=95, cmap=rs_expertreflect_cmap, alpha=0.8, zorder=1.3, transform=ccrs.PlateCarree())
 
 
@@ -1075,7 +1140,7 @@ figure_builder(fig, ax,
     cbar_title="Reflectivity",
     cbar_units="dBz",
     cbar_ticks=np.arange(-15, 95, 5),
-    footer_left=f"RAP 13km  •  INIT {valid_date[0:10]} {valid_date[11:-13]}z  •  {metar_time[11:16]}z METARs, {valid_time}z WPC Fronts, {str(radar_time)[11:16]}z Reflectivity Mosaic, {sat_time_str} {sat_type}",
+    footer_left=f"RAP 13km  •  INIT {valid_date[0:10]} {valid_date[11:-13]}z  •  {metar_time[11:16] + 'z' if metar_time else 'NO'} METARs, {valid_time}z WPC Fronts, {str(radar_time)[11:16]}z Reflectivity Mosaic, {sat_time_str} {sat_type}",
     footer_right=' ',
     save_path=composite_filename)
 

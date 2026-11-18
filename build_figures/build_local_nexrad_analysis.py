@@ -81,6 +81,9 @@ fig, ax = map_builder(extent=[center_lon-box_size, center_lon+box_size, center_l
                       satellite=True)
 
 
+# placeholder so the figure still builds (says NO METARs) if the metar fetch fails
+metar_time = None
+
 try:
     ###################################################################
     # METAR STATION PLOTS
@@ -160,7 +163,7 @@ nexrad_filename = build_filename("staged_figures/local_nexrad_analysis/", f"loca
 figure_builder(fig, ax,
     title="KMVX • Mayville, ND",
     subtitle="WSR-88D Level 2 Base Reflectivity",
-    valid=f"VALID • {radar_scan_string}z  •  ELEVATION: 0.5°   •   {metar_time[11:16]}z METARs",
+    valid=f"VALID • {radar_scan_string}z  •  ELEVATION: 0.5°   •   {metar_time[11:16] + 'z' if metar_time else 'NO'} METARs",
     mappable=sm,
     cbar_title="Equivalent Reflectivity Factor",
     cbar_units="dBZ",

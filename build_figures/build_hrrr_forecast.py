@@ -34,7 +34,7 @@ if project_root not in sys.path:
 # import modules from sub dirs
 from utils.colormaps import *
 from utils.utils import *
-from utils.map import map_builder
+from utils.map import map_builder, project_grid
 from utils.figure import figure_builder
 from get_data.get_hrrr_data import hrrr_forecast
 
@@ -77,7 +77,7 @@ south = center_lat - box_size
 north = center_lat + box_size
 
 
-for fh, valid_time, raw_data in hrrr_forecast(center_lat=center_lat, center_lon=center_lon, box_size=8):
+for fh, valid_time, raw_data in hrrr_forecast(center_lat=center_lat, center_lon=center_lon, box_size=8, forecast_hours=list(range(0, 19))):
 
     temperature = raw_data["t2m"]
     dewpoint = raw_data["d2m"]
@@ -96,6 +96,9 @@ for fh, valid_time, raw_data in hrrr_forecast(center_lat=center_lat, center_lon=
     # PLOT DATA
     fig, ax = map_builder(extent=[west, east, south, north], 
                          satellite=True, satellite_zoom=8, state_color='white', border_color='white')
+
+    # project lat/lon grid to map coords for fast contouring
+    x, y = project_grid(ax, lon, lat)
     ax.set_extent((west, east, south, north),crs=ccrs.PlateCarree())
     fig.canvas.draw()
 
@@ -113,11 +116,11 @@ for fh, valid_time, raw_data in hrrr_forecast(center_lat=center_lat, center_lon=
     cloud_smooth = ndimage.gaussian_filter(cloud_cover.values, sigma=0.8)
     cloud_masked = np.ma.masked_less(cloud_smooth, 20)
 
-    cf = ax.contourf(lon, lat, cloud_masked, levels=[20, 35, 50, 65, 80, 90, 100], cmap=cloud_cmap, alpha=0.3, transform=ccrs.PlateCarree(), zorder=1.15)
+    cf = ax.contourf(x, y, cloud_masked, levels=[20, 35, 50, 65, 80, 90, 100], cmap=cloud_cmap, alpha=0.3, transform=ax.projection, zorder=1.15)
         
-    cs = ax.contour(lon, lat, mslp/100, np.arange(904, 1054, 2), colors='black',
+    cs = ax.contour(x, y, mslp/100, np.arange(904, 1054, 2), colors='black',
                     linewidths=2.0, linestyles='-',
-                    transform=ccrs.PlateCarree(), zorder=11)
+                    transform=ax.projection, zorder=11)
     plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
             rightside_up=True, use_clabeltext=True)
 
@@ -157,6 +160,8 @@ for fh, valid_time, raw_data in hrrr_forecast(center_lat=center_lat, center_lon=
         footer_left=f"HRRR 3km  •  INIT {(valid_time - timedelta(hours=fh)).strftime('%d %b %Y %HZ').upper()}",
         footer_right=' ',
         save_path=composite_filename)
+
+    plt.close(fig)
 
 elapsed_time = comp_time.time() - st
 print(f"############\nSCRIPT FINISHED: time: {comp_time.strftime("%H:%M:%S", comp_time.gmtime(elapsed_time))}\n############")

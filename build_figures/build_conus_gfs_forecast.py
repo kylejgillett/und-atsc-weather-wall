@@ -39,7 +39,7 @@ if project_root not in sys.path:
 from utils.colormaps import *
 from utils.utils import *
 from get_data.get_gfs_data import gfs_forecast
-from utils.map import map_builder
+from utils.map import map_builder, project_grid
 from utils.figure import figure_builder
 
 # parse date information for sat data download
@@ -52,7 +52,7 @@ utc_date = datetime.now(timezone.utc)
 #############################################################################################################################################################################
 #############################################################################################################################################################################
 
-for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98.61, box_size=45, forecast_hours=[12, 24, 36, 48, 60]):
+for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98.61, box_size=45, forecast_hours=list(range(6, 73, 6)) + list(range(84, 169, 12))):
 
 
     # LATS & LONS
@@ -103,9 +103,9 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     vwnd_850 = ndimage.gaussian_filter(raw_data['v-component_of_wind_isobaric'][plev850].values, sigma=sigma) * 1.94384
 
     pres_sfc = ndimage.gaussian_filter(raw_data.variables['MSLP_Eta_model_reduction_msl'], sigma=sigma)
-    temp_sfc = ndimage.gaussian_filter(raw_data.variables['Temperature_height_above_ground'], sigma=sigma) - 273.15
-    uwnd_sfc = ndimage.gaussian_filter(raw_data.variables['u-component_of_wind_height_above_ground'], sigma=sigma) * 1.94384
-    vwnd_sfc = ndimage.gaussian_filter(raw_data.variables['v-component_of_wind_height_above_ground'], sigma=sigma) * 1.94384
+    temp_sfc = ndimage.gaussian_filter(raw_data.variables['Temperature_height_above_ground'], sigma=(0, sigma, sigma)) - 273.15
+    uwnd_sfc = ndimage.gaussian_filter(raw_data.variables['u-component_of_wind_height_above_ground'], sigma=(0, sigma, sigma)) * 1.94384
+    vwnd_sfc = ndimage.gaussian_filter(raw_data.variables['v-component_of_wind_height_above_ground'], sigma=(0, sigma, sigma)) * 1.94384
     reft_sfc = ndimage.gaussian_filter(raw_data.variables['Composite_reflectivity_entire_atmosphere'], 0.01)
     rn_sfc = ndimage.gaussian_filter(raw_data.variables['Categorical_Rain_surface'], 0.75)
     sn_sfc = ndimage.gaussian_filter(raw_data.variables['Categorical_Snow_surface'], 0.75)
@@ -117,10 +117,10 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     #################################
     # CALCULATE FRONTOGENESIS
     ################################# 
-    # using MetPy, compute frontogensis
-    fgen = mpcalc.frontogenesis(raw_data['Temperature_isobaric'], 
-                                raw_data['u-component_of_wind_isobaric'],
-                                raw_data['v-component_of_wind_isobaric'],
+    # using MetPy, compute 850hPa frontogensis (only level plotted)
+    fgen = mpcalc.frontogenesis(raw_data['Temperature_isobaric'][plev850], 
+                                raw_data['u-component_of_wind_isobaric'][plev850],
+                                raw_data['v-component_of_wind_isobaric'][plev850],
                                 latitude=raw_data['latitude'].values,
                                 longitude=raw_data['longitude'].values,
                                 crs=ccrs.PlateCarree())
@@ -133,10 +133,10 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     #################################
     # CALCULATE ADVECTION
     ################################# 
-    # using MetPy, compute temperature advection
-    adv = mpcalc.advection(raw_data['Temperature_isobaric'], 
-                        raw_data['u-component_of_wind_isobaric'],
-                        raw_data['v-component_of_wind_isobaric'],
+    # using MetPy, compute 850hPa temperature advection (only level plotted)
+    adv = mpcalc.advection(raw_data['Temperature_isobaric'][plev850], 
+                        raw_data['u-component_of_wind_isobaric'][plev850],
+                        raw_data['v-component_of_wind_isobaric'][plev850],
                         latitude=raw_data['latitude'].values,
                         longitude=raw_data['longitude'].values,
                         crs=ccrs.PlateCarree())
@@ -206,18 +206,21 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     #################################
     fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
+    # project lat/lon grid to map coords for fast contouring
+    x, y = project_grid(ax, lons, lats)
+
     wdsp_300 = np.sqrt(uwnd_300**2 + vwnd_300**2)
 
     # plot 300 hpa heights
-    contour = ax.contour(lons, lats, ghgt_300, np.arange(0, 12000, 120),
+    contour = ax.contour(x, y, ghgt_300, np.arange(0, 12000, 120),
                     colors='black', linewidths=3.0, linestyles='-',
-                    transform=ccrs.PlateCarree(), zorder=11)
+                    transform=ax.projection, zorder=11)
     plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
             rightside_up=True, use_clabeltext=True)
 
     # plot 300 hpa wind speed
-    contourf = ax.contourf(lons, lats, wdsp_300, np.arange(50, 160, 5), extend='max',
-                    cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
+    contourf = ax.contourf(x, y, wdsp_300, np.arange(50, 160, 5), extend='max',
+                    cmap=wdsp_cmap, alpha=0.7, transform=ax.projection, zorder=4)
 
     # plot 300 hpa wind barbs
     every = 10
@@ -262,19 +265,22 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     #################################
     fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='k', border_color='k', border_factor=1.5)
 
+    # project lat/lon grid to map coords for fast contouring
+    x, y = project_grid(ax, lons, lats)
+
     n_reps = 20
     p_on_2pvu = mpcalc.smooth_n_point(p_on_2pvu, 9, n_reps)
 
     # plot pressure on the 2 PVU surface
-    contour = ax.contour(lons, lats, p_on_2pvu, np.arange(100, 751, 50),
+    contour = ax.contour(x, y, p_on_2pvu, np.arange(100, 751, 50),
                     colors='black', linewidths=3.0, linestyles='-',
-                    transform=ccrs.PlateCarree(), zorder=11)
+                    transform=ax.projection, zorder=11)
     plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
             rightside_up=True, use_clabeltext=True)
 
     # plot 300hpa pv fill
-    contourf = ax.contourf(raw_data['longitude'], raw_data['latitude'], thta_on_2pvu, np.arange(270, 410, 5), cmap=pv_cmap,
-                    transform=ccrs.PlateCarree(), extend='both')
+    contourf = ax.contourf(x, y, thta_on_2pvu, np.arange(270, 410, 5), cmap=pv_cmap,
+                    transform=ax.projection, extend='both')
 
     every = 10
     barbs = ax.barbs(lons.values[0::every], lats.values[0::every],
@@ -316,18 +322,21 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     #################################
     fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
+    # project lat/lon grid to map coords for fast contouring
+    x, y = project_grid(ax, lons, lats)
+
     wdsp_500 = np.sqrt(uwnd_500**2 + vwnd_500**2)
 
     # plot 500 hpa heights
-    contour = ax.contour(lons, lats, ghgt_500, np.arange(3000, 7000, 60),
+    contour = ax.contour(x, y, ghgt_500, np.arange(3000, 7000, 60),
                     colors='black', linewidths=3.0, linestyles='-',
-                    transform=ccrs.PlateCarree(), zorder=11)
+                    transform=ax.projection, zorder=11)
     plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
             rightside_up=True, use_clabeltext=True)
 
     # plot 500hpa wind speed
-    contourf = ax.contourf(lons, lats, wdsp_500, np.arange(30, 140, 5), extend='max',
-                    cmap=wdsp_cmap, alpha=0.7, transform=ccrs.PlateCarree(), zorder=4)
+    contourf = ax.contourf(x, y, wdsp_500, np.arange(30, 140, 5), extend='max',
+                    cmap=wdsp_cmap, alpha=0.7, transform=ax.projection, zorder=4)
 
     # plot 500 hpa wind barbs
     every = 10
@@ -373,20 +382,23 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     #################################
     fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
+    # project lat/lon grid to map coords for fast contouring
+    x, y = project_grid(ax, lons, lats)
+
     n_reps = 50
     vor_500 = mpcalc.smooth_n_point(mpcalc.vorticity(uwnd_500*units.kts, vwnd_500*units.kts, dx=dx, dy=dy), 9, n_reps)
 
     # plot 500 hpa heights
-    contour = ax.contour(lons, lats, ghgt_500, np.arange(3000, 7000, 60),
+    contour = ax.contour(x, y, ghgt_500, np.arange(3000, 7000, 60),
                     colors='black', linewidths=3.0, linestyles='-',
-                    transform=ccrs.PlateCarree(), zorder=11)
+                    transform=ax.projection, zorder=11)
     plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
             rightside_up=True, use_clabeltext=True)
 
     # plot relative vorticity fill
     norm = mcolors.TwoSlopeNorm(vmin=-30, vcenter=0, vmax=50)
-    contourf = ax.contourf(lons, lats, vor_500 * 10**5, np.arange(-30, 52, 2), 
-                        norm=norm, extend='both', cmap='PuOr_r', zorder=5, alpha=1, transform=ccrs.PlateCarree())
+    contourf = ax.contourf(x, y, vor_500 * 10**5, np.arange(-30, 52, 2), 
+                        norm=norm, extend='both', cmap='PuOr_r', zorder=5, alpha=1, transform=ax.projection)
 
     # plot wind barbs
     every = 10
@@ -501,26 +513,29 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     #################################
     fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
+    # project lat/lon grid to map coords for fast contouring
+    x, y = project_grid(ax, lons, lats)
+
     wdsp_850 = np.sqrt(uwnd_850**2 + vwnd_850**2)
 
     # plot 850hpa heights
-    contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
+    contour = ax.contour(x, y, ghgt_850, np.arange(0, 1700, 30),
                     colors='black', linewidths=3.0, linestyles='-',
-                    transform=ccrs.PlateCarree(), zorder=11)
+                    transform=ax.projection, zorder=11)
     plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
             rightside_up=True, use_clabeltext=True)
 
     n_reps = 20
     # plot 850hpa tadv
-    tadv_contourf = ax.contourf(raw_data['longitude'], raw_data['latitude'], 3*(mpcalc.smooth_n_point(adv[plev850,:,:], 9, n_reps)),
-                    np.arange(-7,7.25,0.25), cmap='bwr', transform=ccrs.PlateCarree(), zorder=4, extend='both')
+    tadv_contourf = ax.contourf(x, y, 3*(mpcalc.smooth_n_point(adv, 9, n_reps)),
+                    np.arange(-7,7.25,0.25), cmap='bwr', transform=ax.projection, zorder=4, extend='both')
 
-    ax.contour(lons, lats, temp_850, levels=[0], linewidths=3, linestyles='--', colors='gray', transform=ccrs.PlateCarree(), zorder=5)  
+    ax.contour(x, y, temp_850, levels=[0], linewidths=3, linestyles='--', colors='gray', transform=ax.projection, zorder=5)  
 
     # plot filled contours pf frontogenesis > 2 delta deg C / hr
-    fgen_contourf = ax.contour(raw_data['longitude'], raw_data['latitude'], fgen_masked[plev850,:,:], 
+    fgen_contourf = ax.contour(x, y, fgen_masked, 
                             np.arange(1, 32, 2), colors='navy', linestyles='-',
-                            transform=ccrs.PlateCarree(), zorder=4)
+                            transform=ax.projection, zorder=4)
 
     # plot 850hpa wind barbs
     every = 10
@@ -562,15 +577,18 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     #################################
     fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
+    # project lat/lon grid to map coords for fast contouring
+    x, y = project_grid(ax, lons, lats)
+
     # plot 850 hpa heights
-    contour = ax.contour(lons, lats, ghgt_850, np.arange(0, 1700, 30),
+    contour = ax.contour(x, y, ghgt_850, np.arange(0, 1700, 30),
                     colors='black', linewidths=3.0, linestyles='-',
-                    transform=ccrs.PlateCarree(), zorder=11)
+                    transform=ax.projection, zorder=11)
     plt.clabel(contour, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
             rightside_up=True, use_clabeltext=True)
-    ax.contour(lons, lats, temp_850, levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
-    contourf = ax.contourf(lons, lats, temp_850, np.arange(-40, 42, 1), extent='both',
-                    cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
+    ax.contour(x, y, temp_850, levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ax.projection, zorder=5)  
+    contourf = ax.contourf(x, y, temp_850, np.arange(-40, 42, 1), extend='both',
+                    cmap=temp_cmap, alpha=1, transform=ax.projection, zorder=4)
 
     # plot 850hpa wind barbs
     every = 10
@@ -615,17 +633,20 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     #################################
     fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
+    # project lat/lon grid to map coords for fast contouring
+    x, y = project_grid(ax, lons, lats)
+
     # plot mslp
-    cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
+    cs = ax.contour(x, y, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
                     linewidths=3.0, linestyles='-',
-                    transform=ccrs.PlateCarree(), zorder=11)
+                    transform=ax.projection, zorder=11)
     plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
             rightside_up=True, use_clabeltext=True)
 
-    ax.contour(lons, lats, temp_sfc[0, :,:], levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ccrs.PlateCarree(), zorder=5)  
+    ax.contour(x, y, temp_sfc[0, :,:], levels=[0], linewidths=3, linestyles='--', colors='cyan', transform=ax.projection, zorder=5)  
 
-    contourf = ax.contourf(lons, lats, temp_sfc[0, :,:], np.arange(-50, 51, 1), extent='both',
-                    cmap=temp_cmap, alpha=1, transform=ccrs.PlateCarree(), zorder=4)
+    contourf = ax.contourf(x, y, temp_sfc[0, :,:], np.arange(-50, 51, 1), extend='both',
+                    cmap=temp_cmap, alpha=1, transform=ax.projection, zorder=4)
 
     # plot  wind barbs
     every = 10
@@ -667,10 +688,13 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     #################################
     fig, ax = map_builder(extent=[-119, -74, 23.5, 53.5], terrain=True, state_color='navy', border_color='navy', border_factor=1.5)
 
+    # project lat/lon grid to map coords for fast contouring
+    x, y = project_grid(ax, lons, lats)
+
     # plot mslp
-    cs = ax.contour(lons, lats, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
+    cs = ax.contour(x, y, pres_sfc/100, np.arange(904, 1054, 4), colors='black',
                     linewidths=3.0, linestyles='-',
-                    transform=ccrs.PlateCarree(), zorder=11)
+                    transform=ax.projection, zorder=11)
     plt.clabel(cs, fontsize=8, inline=1, inline_spacing=10, fmt='%i',
             rightside_up=True, use_clabeltext=True)
     
@@ -693,8 +717,8 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
     # store contourf mappable objs in a dict for cbars
     cf_mappables = {} 
     for name, (value, mask, cmap) in ptype_data_2d.items():
-        cf = ax.contourf(lons, lats, mask, levels=levels,cmap=cmap,norm=norm,
-            transform=ccrs.PlateCarree(),extend='max', zorder=value)
+        cf = ax.contourf(x, y, mask, levels=levels,cmap=cmap,norm=norm,
+            transform=ax.projection,extend='max', zorder=value)
         cf_mappables[name] = cf
     
 
@@ -731,8 +755,8 @@ for fh, forecast_time, raw_data in gfs_forecast(center_lat=37.86, center_lon=-98
             linestyles = 'solid'
             linewidths = 2.0
 
-        cs = ax.contour(lons, lats,thickness_1000_500, levels=clevthick, colors=color,
-            linewidths=linewidths, linestyles=linestyles,transform=ccrs.PlateCarree(),zorder=10)
+        cs = ax.contour(x, y,thickness_1000_500, levels=clevthick, colors=color,
+            linewidths=linewidths, linestyles=linestyles,transform=ax.projection,zorder=10)
         plt.clabel(cs, **kw_clabels)
 
     # plot  wind barbs

@@ -63,7 +63,7 @@ for outlook_day in range(1,4):
             url = f"https://www.spc.noaa.gov/products/outlook/archive/{year}/day{outlook_day}otlk_{year}{month}{day}_{t}_cat.lyr.geojson"
             try:
                 # Quick check if file exists
-                r = requests.get(url)
+                r = requests.get(url, timeout=30)
                 if r.status_code == 200 and "json" in r.headers.get("Content-Type", "").lower():
                     #print('status is 200')
                     #print(url)

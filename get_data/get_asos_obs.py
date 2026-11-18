@@ -19,8 +19,11 @@ station_id = 'GFK'
 def get_asos_obs(station_id, hours=48, max_retries=4):
     
     # define time params
-    end = datetime.now(timezone.utc)
-    start = end - timedelta(hours=hours)
+    now = datetime.now(timezone.utc)
+    start = now - timedelta(hours=hours)
+    # IEM's end hour is exclusive (hour2 only, no minute), so request through the next
+    # hour to include obs from the current hour
+    end = now + timedelta(hours=1)
 
     # set up IEM data fetch
     url = (

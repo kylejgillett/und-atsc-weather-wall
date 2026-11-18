@@ -3,6 +3,8 @@ Description=Weather Wall Hourly Forecast Products
 
 [Service]
 Type=oneshot
+# kill the run if it hangs (e.g. a stalled download) so the next scheduled run isn't skipped
+TimeoutStartSec=40min
 WorkingDirectory=%h/und-atsc-weather-wall
 ExecStart=%h/und-atsc-weather-wall/upload/run_job.sh upload_conus_rap_analysis.sh upload_hrrr_forecasts.sh upload_outlooks.sh
 StandardOutput=append:%h/weather_wall_logs/hourly_forecasts.log

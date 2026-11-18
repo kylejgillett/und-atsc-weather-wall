@@ -17,6 +17,7 @@ import os
 import sys
 import time as comp_time
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 import requests
 import xarray as xr
@@ -324,7 +325,33 @@ def _open_hrrr_grib(path):
 
 
 
-def hrrr_forecast(center_lat=37.86, center_lon=-98.61, box_size=20, forecast_hours=(0, 3, 6, 9, 12, 15, 18), request_pause=10):
+def _fetch_hrrr_hour(cycle, fh, center_lat, center_lon, box_size, request_pause):
+    """
+    Download one HRRR forecast hour to a temp GRIB file.
+
+    Runs in a background thread so the next forecast hour downloads
+    while the current one is being plotted. The GRIB file is opened
+    on the main thread, since eccodes is not guaranteed thread-safe.
+    """
+
+    # NOMADS asks batch users not to hammer the
+    # filtering service with rapid sequential calls.
+    if request_pause > 0:
+        comp_time.sleep(request_pause)
+
+    print(f" GETTING HRRR FH: {fh:02d}")
+
+    return _download_hrrr_subset(
+        cycle=cycle,
+        fh=fh,
+        center_lat=center_lat,
+        center_lon=center_lon,
+        box_size=box_size)
+
+
+
+
+def hrrr_forecast(center_lat=37.86, center_lon=-98.61, box_size=20, forecast_hours=(0, 3, 6, 9, 12, 15, 18), request_pause=3):
 
     st = comp_time.time()
 
@@ -334,44 +361,61 @@ def hrrr_forecast(center_lat=37.86, center_lon=-98.61, box_size=20, forecast_hou
     print(f' HRRR CYCLE: {base_time.strftime("%Y-%m-%d %H:%M:%SZ")}')
 
 
-    for i, fh in enumerate(forecast_hours):
-        valid_time = base_time + timedelta(hours=fh)
-        print(f" GETTING HRRR FH: {fh:02d}")
+    # One forecast hour is downloaded ahead in a background thread
+    # while the current one is plotted. A single worker keeps the
+    # NOMADS requests sequential, at least `request_pause` apart.
+    with ThreadPoolExecutor(max_workers=1) as pool:
 
-        grib_path = None
-        forecast_data = None
+        next_fetch = pool.submit(_fetch_hrrr_hour, base_time, forecast_hours[0],
+                                 center_lat, center_lon, box_size, 0)
 
         try:
-            # NOMADS asks batch users not to hammer the
-            # filtering service with rapid sequential calls.
-            if i > 0 and request_pause > 0:
-                comp_time.sleep(request_pause)
-            grib_path = _download_hrrr_subset(
-                cycle=base_time,
-                fh=fh,
-                center_lat=center_lat,
-                center_lon=center_lon,
-                box_size=box_size)
-            forecast_data = _open_hrrr_grib(grib_path)
+            for i, fh in enumerate(forecast_hours):
+                valid_time = base_time + timedelta(hours=fh)
+                fetch = next_fetch
+
+                # Start downloading the next forecast hour
+                if i + 1 < len(forecast_hours):
+                    next_fetch = pool.submit(_fetch_hrrr_hour, base_time, forecast_hours[i + 1],
+                                             center_lat, center_lon, box_size, request_pause)
+                else:
+                    next_fetch = None
+
+                grib_path = None
+                forecast_data = None
+
+                try:
+                    grib_path = fetch.result()
+                    forecast_data = _open_hrrr_grib(grib_path)
 
 
-        except Exception as e:
-            print(f" HRRR FH {fh:02d} FAILED -- {e}")
+                except Exception as e:
+                    print(f" HRRR FH {fh:02d} FAILED -- {e}")
 
-            if grib_path and os.path.exists(grib_path):
-                os.remove(grib_path)
-            gc.collect()
-            continue
+                    if grib_path and os.path.exists(grib_path):
+                        os.remove(grib_path)
+                    gc.collect()
+                    continue
 
-        print(f' HRRR FH {fh:02d} COMPLETE: {valid_time.strftime("%Y-%m-%d %H:%M:%SZ")}')
+                print(f' HRRR FH {fh:02d} COMPLETE: {valid_time.strftime("%Y-%m-%d %H:%M:%SZ")}')
 
-        yield fh, valid_time, forecast_data
-        forecast_data.close()
+                yield fh, valid_time, forecast_data
+                forecast_data.close()
 
-        if (grib_path is not None and os.path.exists(grib_path)):
-            os.remove(grib_path)
-        del forecast_data
-        gc.collect()
+                if (grib_path is not None and os.path.exists(grib_path)):
+                    os.remove(grib_path)
+                del forecast_data
+                gc.collect()
+
+        finally:
+            # Remove a prefetched file if the loop stopped early
+            if next_fetch is not None:
+                try:
+                    leftover = next_fetch.result()
+                    if leftover and os.path.exists(leftover):
+                        os.remove(leftover)
+                except Exception:
+                    pass
 
     elapsed_time = comp_time.time() - st
 

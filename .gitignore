@@ -1,3 +1,4 @@
 __pycache__/
 /staged_figures
 /utils/.cartopy_*
+/temp_files

@@ -9,8 +9,29 @@ import cartopy.crs as ccrs
 import s3fs
 import numpy as np
 
+
+# downloads go in the repo's temp_files/ folder. an absolute path, so it doesn't depend on
+# the working directory (jobs run from the repo root, where "../temp_files" is outside the repo)
+TEMP_DIR = Path(__file__).resolve().parents[1] / "temp_files"
+
+
+def _download_whole(fs, remote_file, local_file):
+    """
+    Download to a .part file and rename it when complete, so an interrupted
+    download is never mistaken for a finished file and reused.
+    """
+    if local_file.exists():
+        return
+    part_file = local_file.with_name(local_file.name + ".part")
+    try:
+        fs.get(remote_file, str(part_file))
+        part_file.replace(local_file)
+    finally:
+        if part_file.exists():
+            part_file.unlink()
+
 # VISIBLE 
-def download_goes19_visible(year, day_of_year, hour, output_dir="../temp_files", lookback_hours=2, sector='CONUS'):
+def download_goes19_visible(year, day_of_year, hour, output_dir=TEMP_DIR, lookback_hours=2, sector='CONUS'):
 
     fs = s3fs.S3FileSystem(anon=True)
     request_time = datetime.strptime(f"{int(year):04d}{int(day_of_year):03d}{int(hour):02d}", "%Y%j%H")
@@ -44,8 +65,7 @@ def download_goes19_visible(year, day_of_year, hour, output_dir="../temp_files",
     output_dir.mkdir(parents=True, exist_ok=True)
     local_file = output_dir / Path(latest_file).name
 
-    if not local_file.exists():
-        fs.get(latest_file, str(local_file))
+    _download_whole(fs, latest_file, local_file)
 
     print(f"    GOES-19 {sector} VISIBLE DOWNLOADED.....{local_file.name}")
 
@@ -59,7 +79,7 @@ def _get_scan_id(filepath):
     return Path(filepath).name.split("_s")[1].split("_e")[0]
 
 
-def download_goes19_sandwich(year, day_of_year, hour, output_dir="../temp_files", lookback_hours=2):
+def download_goes19_sandwich(year, day_of_year, hour, output_dir=TEMP_DIR, lookback_hours=2):
 
     fs = s3fs.S3FileSystem(anon=True)
     request_time = datetime.strptime(f"{int(year):04d}{int(day_of_year):03d}{int(hour):02d}", "%Y%j%H")
@@ -106,8 +126,7 @@ def download_goes19_sandwich(year, day_of_year, hour, output_dir="../temp_files"
 
     for channel, remote_file in matched_files.items():
         local_file = output_dir / Path(remote_file).name
-        if not local_file.exists():
-            fs.get(remote_file, str(local_file))
+        _download_whole(fs, remote_file, local_file)
         local_files[channel] = str(local_file)
 
     print(f"    GOES-19 SANDWICH DOWNLOADED.....C07 + C13")

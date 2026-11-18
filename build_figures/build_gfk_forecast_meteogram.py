@@ -18,8 +18,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from matplotlib.colors import to_rgba
+from matplotlib.colors import to_rgba, LinearSegmentedColormap
 from matplotlib.lines import Line2D
+from matplotlib.legend_handler import HandlerTuple
 from matplotlib.patches import Patch, Rectangle
 from matplotlib.ticker import FuncFormatter
 from matplotlib.patheffects import withStroke
@@ -82,8 +83,11 @@ def bold_ticks(ax):
         label.set_fontweight("bold")
 
 
-def side_legend(ax, handles, loc="upper left", anchor_y=1.02):
-    leg = ax.legend(handles=handles, ncol=1, fontsize=7.2, loc=loc, bbox_to_anchor=(1.012, anchor_y),
+def side_legend(ax, handles, loc="upper left", anchor_y=1.02, handler_map=None, labels=None):
+    # labels are needed when a handle is a tuple of patches (drawn side by side as one entry)
+    if labels is None:
+        labels = [handle.get_label() for handle in handles]
+    leg = ax.legend(handles=handles, labels=labels, ncol=1, fontsize=7.2, loc=loc, bbox_to_anchor=(1.012, anchor_y), handler_map=handler_map,
                     borderaxespad=0, frameon=False, handlelength=2.0, handletextpad=0.6, labelspacing=0.45)
     for text in leg.get_texts():
         text.set_fontweight("bold")
@@ -198,10 +202,10 @@ print(f"    GEFS 7-DAY QPF.....MEDIAN {qpf_stats['p50'].iloc[-1]:.2f} IN, "
 ###########################
 fig = plt.figure(figsize=(14, 5.2), dpi=250, facecolor=FIGURE_BG)
 
-# define all axes: temperature (with wind barbs), a thin sky / PoP / weather strip, and cumulative QPF
-ax1 = fig.add_axes([AX_LEFT, 0.455, AX_WIDTH, 0.330])
-ax2 = fig.add_axes([AX_LEFT, 0.310, AX_WIDTH, 0.132], sharex=ax1)
-ax3 = fig.add_axes([AX_LEFT, 0.145, AX_WIDTH, 0.152], sharex=ax1)
+# define all axes: temperature, a thin wind / sky / weather / PoP strip, and cumulative QPF
+ax1 = fig.add_axes([AX_LEFT, 0.474, AX_WIDTH, 0.311])
+ax2 = fig.add_axes([AX_LEFT, 0.283, AX_WIDTH, 0.178], sharex=ax1)
+ax3 = fig.add_axes([AX_LEFT, 0.145, AX_WIDTH, 0.125], sharex=ax1)
 
 # apply base settings to all axes
 for ax in [ax1, ax2, ax3]:
@@ -227,8 +231,8 @@ for i, day in enumerate(local_days):
 
     # day name centered in the band (skip slivers too narrow to label)
     if (day_end - day_start) >= pd.Timedelta(hours=10):
-        ax1.text(day_start + (day_end - day_start) / 2, 0.955, day.strftime("%a %m/%d").upper(), transform=ax1.get_xaxis_transform(),
-                 ha="center", va="top", fontsize=8, fontweight="bold", color=TEXT_SECONDARY, zorder=9)
+        ax1.text(day_start + (day_end - day_start) / 2, 1.012, day.strftime("%a %m/%d").upper(), transform=ax1.get_xaxis_transform(),
+                 ha="center", va="bottom", fontsize=8, fontweight="bold", color=TEXT_SECONDARY, zorder=9, clip_on=False)
 
 
 
@@ -247,21 +251,23 @@ ax1.plot(nws["valid_time"], wind_chill, color=FEEL_COLOR, linewidth=1.8, linesty
 ax1.plot(nws["valid_time"], nws["temperature_f"], color=TEMP_COLOR, linewidth=4.2, zorder=5)
 ax1.axhline(32, color=FREEZE_COLOR, linewidth=1.1, linestyle="--", alpha=0.70, zorder=1)
 
-# axis max/min: the coldest line sits above the bottom BARB_BAND of the panel (wind barbs)
-# and the warmest below TOP_BAND (day labels and high annotations)
-BARB_BAND = 0.24
-TOP_BAND = 0.73
-temp_low = np.nanmin([nws["dewpoint_f"].min(), wind_chill.min(), temp_stats["p10"].min()])
-temp_high = np.nanmax([nws["temperature_f"].max(), temp_stats["p90"].max()])
-temp_range = (temp_high - temp_low) / (TOP_BAND - BARB_BAND)
-temp_min = temp_low - BARB_BAND * temp_range
+# axis max/min: use as much of the panel as possible. every line stays inside a small edge
+# pad, and the NWS temperature curve stays inside a larger pad so the high labels above it
+# and the low labels below it are not cut off. the range is the smallest that meets all four
+EDGE_PAD = 0.04
+LABEL_PAD = 0.17
+lines_low = np.nanmin([nws["dewpoint_f"].min(), wind_chill.min(), temp_stats["p10"].min()])
+lines_high = np.nanmax([nws["temperature_f"].max(), temp_stats["p90"].max()])
+temp_low = nws["temperature_f"].min()
+temp_high = nws["temperature_f"].max()
+temp_range = max((lines_high - lines_low) / (1 - 2 * EDGE_PAD),
+                 (temp_high - lines_low) / (1 - LABEL_PAD - EDGE_PAD),
+                 (lines_high - temp_low) / (1 - EDGE_PAD - LABEL_PAD),
+                 (temp_high - temp_low) / (1 - 2 * LABEL_PAD))
+temp_min = min(lines_low - EDGE_PAD * temp_range, temp_low - LABEL_PAD * temp_range)
 temp_max = temp_min + temp_range
 ax1.set_ylim(temp_min, temp_max)
-
-# only label temperatures above the barb band
-ax1.yaxis.set_major_locator(plt.MaxNLocator(6, integer=True))
-ax1.set_yticks([tick for tick in ax1.get_yticks() if temp_low - 3 <= tick <= temp_max])
-ax1.set_ylim(temp_min, temp_max)
+ax1.yaxis.set_major_locator(plt.MaxNLocator(7, integer=True))
 ax1.set_ylabel("Temperature °F", color=TEXT_PRIMARY, fontsize=8, fontweight="bold", labelpad=4)
 
 
@@ -286,28 +292,12 @@ for _, period in nws_extremes.iterrows():
                  ha="center", va=va, fontsize=9, fontweight="bold", color=TEXT_PRIMARY, path_effects=TEXT_OUTLINE, zorder=8)
 
 
-# NWS wind barbs (kt) every 6 hr along the bottom of the panel; gusts >= 25 kt labeled
-barb_hours = nws.loc[nws["valid_time"].dt.hour % 6 == 0].dropna(subset=["wind_speed_kt", "wind_dir_deg"])
-barb_dir = np.deg2rad(barb_hours["wind_dir_deg"].to_numpy())
-barb_u = -barb_hours["wind_speed_kt"].to_numpy() * np.sin(barb_dir)
-barb_v = -barb_hours["wind_speed_kt"].to_numpy() * np.cos(barb_dir)
-barb_x = mdates.date2num(barb_hours["valid_time"].dt.tz_localize(None))
-ax1.barbs(barb_x, np.full(len(barb_x), BARB_BAND / 2), barb_u, barb_v, transform=ax1.get_xaxis_transform(),
-          length=5.2, linewidth=0.8, pivot="middle", color=WIND_COLOR, zorder=6, clip_on=False)
-
-for _, hour in barb_hours.iterrows():
-    if hour["wind_gust_kt"] >= 25:
-        ax1.text(hour["valid_time"] + pd.Timedelta(hours=1.5), BARB_BAND / 2, f"G{hour['wind_gust_kt']:.0f}",
-                 transform=ax1.get_xaxis_transform(), ha="left", va="center", fontsize=6, fontweight="bold",
-                 color=TEXT_PRIMARY, path_effects=TEXT_OUTLINE, zorder=7)
-
 temp_handles = [
     Line2D([], [], color=TEMP_COLOR, linewidth=4.2, label="NWS TEMP"),
     Line2D([], [], color=DEWP_COLOR, linewidth=2.0, label="NWS DEWPOINT"),
     Line2D([], [], color=FEEL_COLOR, linewidth=1.8, linestyle=":", label="NWS WIND CHILL"),
     Line2D([], [], color=HIGH_COLOR, marker="^", linestyle="None", markersize=6, label="NWS HIGH"),
     Line2D([], [], color=LOW_COLOR, marker="v", linestyle="None", markersize=6, label="NWS LOW"),
-    Line2D([], [], color=WIND_COLOR, linewidth=1.0, label="NWS WIND (KT)"),
     Line2D([], [], color=ENS_COLOR, linewidth=1.0, alpha=0.5, label="GEFS MEMBERS"),
     Line2D([], [], color=ENS_MEDIAN_COLOR, linewidth=1.3, linestyle="--", alpha=0.75, label="GEFS MEDIAN"),
     Patch(facecolor=ENS_COLOR, alpha=0.22, label="GEFS 10–90%"),
@@ -319,7 +309,7 @@ side_legend(ax1, temp_handles)
 ###########################
 # PRECIP PROBABILITY STRIP
 ###########################
-# four rows, top to bottom: NWS sky cover (brighter = cloudier), NWS non-precip weather
+# five rows, top to bottom: NWS wind barbs (kt), NWS sky cover (brighter = cloudier), NWS non-precip weather
 # (fog, haze, blowing snow...) as METAR-style codes, NWS PoP colored by forecast precip
 # type, and GEFS PoP as the % of members with >= 0.01 in in the trailing 6 hr
 # (PoP cell opacity scales with probability)
@@ -364,11 +354,41 @@ if not (wx != "").any():
     ax2.text(0.5, 2.5, "NO FOG, HAZE, SMOKE, OR BLOWING SNOW FORECAST", transform=ax2.get_yaxis_transform(),
              ha="center", va="center", fontsize=5.8, fontweight="bold", color=TEXT_MUTED, zorder=6)
 
-ax2.set_ylim(0, 4)
-ax2.set_yticks([0.5, 1.5, 2.5, 3.5])
-ax2.set_yticklabels(["GEFS PoP", "NWS PoP", "WX", "SKY"])
+# NWS wind in the top row: hourly cells filled by sustained speed in 5 kt steps, from dark
+# lavender (5 kt) through lavender to near white (40+ kt) so each step is a clear jump;
+# direction arrows every 6 hr, and gusts >= 25 kt labeled
+WIND_ROW = 4.7
+WIND_STEPS = [5, 10, 15, 20, 25, 30, 35, 40]
+wind_cmap = LinearSegmentedColormap.from_list("wind", [WIND_FILL_DARK, WIND_FILL_COLOR, WIND_FILL_LIGHT])
+
+def wind_fill(speed):
+    # transparent below 5 kt, then one shade per 5 kt band up to the lightest at 40+ kt
+    step = np.digitize(speed, WIND_STEPS)
+    return [wind_cmap((s - 1) / (len(WIND_STEPS) - 1)) if s > 0 else (0, 0, 0, 0) for s in np.atleast_1d(step)]
+
+wind_speed = nws["wind_speed_kt"].fillna(0).to_numpy()
+ax2.bar(nws["valid_time"], 1.26, bottom=4.07, width=hour_width, color=wind_fill(wind_speed),
+        align="edge", linewidth=0, zorder=3)
+
+# fixed-length arrows pointing the way the wind blows toward (speed is shown by the fill)
+arrow_hours = nws.loc[nws["valid_time"].dt.hour % 6 == 0].dropna(subset=["wind_speed_kt", "wind_dir_deg"])
+arrow_dir = np.deg2rad(arrow_hours["wind_dir_deg"].to_numpy())
+arrow_x = mdates.date2num(arrow_hours["valid_time"].dt.tz_localize(None))
+ax2.quiver(arrow_x, np.full(len(arrow_x), WIND_ROW), -np.sin(arrow_dir), -np.cos(arrow_dir),
+           pivot="middle", scale=1 / 0.165, scale_units="inches", width=0.0021, headwidth=4.5, headlength=4.5, headaxislength=4,
+           color=TEXT_PRIMARY, zorder=6, path_effects=[withStroke(linewidth=1.6, foreground=PANEL_BG)])
+
+for _, hour in arrow_hours.iterrows():
+    if hour["wind_gust_kt"] >= 25:
+        ax2.text(hour["valid_time"] + pd.Timedelta(hours=1.5), WIND_ROW, f"G{hour['wind_gust_kt']:.0f}",
+                 ha="left", va="center", fontsize=6, fontweight="bold",
+                 color=TEXT_PRIMARY, path_effects=TEXT_OUTLINE, zorder=7, clip_on=True)
+
+ax2.set_ylim(0, 5.4)
+ax2.set_yticks([0.5, 1.5, 2.5, 3.5, WIND_ROW])
+ax2.set_yticklabels(["GEFS PoP", "NWS PoP", "WX", "SKY", "WIND"])
 ax2.tick_params(axis="y", labelsize=7)
-for row_edge in (1, 2, 3):
+for row_edge in (1, 2, 3, 4):
     ax2.axhline(row_edge, color=SPINE_COLOR, linewidth=0.6, zorder=2)
 
 # label the peak probability in each row for each local day, keeping only the
@@ -394,10 +414,14 @@ for series, row_y, shift_hr in pop_rows:
 # legend lists only the precip types actually drawn (PoP >= 5%); faint gray low-PoP
 # cells and the self-labeled WX row are left out so a busy week still fits the column
 drawn_types = set(nws.loc[nws["pop_percent"] >= 5, "precip_type"]) - {""}
-pop_handles = [Patch(facecolor=color, label=PRECIP_TYPE_LABELS[ptype])
-               for ptype, color in PRECIP_TYPE_COLORS.items() if ptype in drawn_types]
+# wind steps shown side by side as one legend entry
+wind_handle = tuple(Patch(facecolor=wind_fill(kt)[0]) for kt in WIND_STEPS)
+pop_handles = [wind_handle]
+pop_handles += [Patch(facecolor=color, label=PRECIP_TYPE_LABELS[ptype])
+                for ptype, color in PRECIP_TYPE_COLORS.items() if ptype in drawn_types]
 pop_handles.append(Patch(facecolor=ENS_MEDIAN_COLOR, label="GEFS PoP (6H ≥0.01\")"))
-side_legend(ax2, pop_handles, anchor_y=1.0)
+pop_labels = ["NWS WIND 5–40+ KT"] + [handle.get_label() for handle in pop_handles[1:]]
+side_legend(ax2, pop_handles, anchor_y=1.0, handler_map={tuple: HandlerTuple(ndivide=None, pad=0)}, labels=pop_labels)
 
 
 

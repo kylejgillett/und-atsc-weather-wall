@@ -119,6 +119,9 @@ dwpt_sfc = mpcalc.dewpoint_from_relative_humidity(temp_sfc*units.degC, relh_sfc*
 # get radar mosaic data
 radar_data, radar_lat, radar_lon, radar_time = get_latest_mrms(north+5, south-5, west-10, east+10)
 
+# placeholder so the figure still builds (footer says NO METARs) if the metar fetch fails
+metar_time = None
+
 # get metar data
 try:
     metar_obs, metar_time = get_metar_data(reduced_to=50000)
@@ -140,14 +143,37 @@ try:
 except:
     pass
 
-# get satellite data
-sat_file = download_goes19_visible(utc_now[0], utc_now[4], utc_now[3])
-xrds_sat = xr.open_dataset(sat_file)
-sat_valid = datetime.fromisoformat(xrds_sat.time_coverage_start.replace("Z", "+00:00"))
+# get satellite data. if GOES is unavailable the map is still built without it (footer
+# says NO GOES), and the file is closed and deleted once the subset is in memory, even on errors
 sat_type = "GOES-19 Band 02 Visible"
-sat_valid_str = sat_valid.strftime("%Y-%m-%d %H:%MZ")
-sat_time_str = sat_valid.strftime("%H:%MZ")
-visible, sat_crs, sat_extent = subset_goes_to_map(xrds_sat, west-5, east+5, south+2, north-2, pad_km=250)
+sat_time_str = "NO"
+visible = None
+try:
+    sat_file = download_goes19_visible(utc_now[0], utc_now[4], utc_now[3])
+except Exception as e:
+    print(f"    GOES DOWNLOAD FAILED -- {e}")
+    sat_file = None
+
+if sat_file is not None:
+    xrds_sat = None
+    try:
+        xrds_sat = xr.open_dataset(sat_file)
+        sat_valid = datetime.fromisoformat(xrds_sat.time_coverage_start.replace("Z", "+00:00"))
+        visible, sat_crs, sat_extent = subset_goes_to_map(xrds_sat, west-5, east+5, south+2, north-2, pad_km=250)
+        visible = visible.load()
+        sat_time_str = sat_valid.strftime("%H:%MZ")
+    except Exception as e:
+        print(f"    GOES SATELLITE FAILED -- {e}")
+        visible = None
+    finally:
+        if xrds_sat is not None:
+            xrds_sat.close()
+        # remove temporary GOES file after use
+        try:
+            os.remove(sat_file)
+            print(f"    GOES TEMP FILE REMOVED.....{os.path.basename(sat_file)}")
+        except OSError as e:
+            print(f"    WARNING: Could not remove GOES temp file: {e}")
 
 
 
@@ -165,16 +191,10 @@ fig.canvas.draw()
 ###################################################################
 # SATELLITE
 ###################################################################
-ax.imshow(visible.values, origin="upper", extent=sat_extent, transform=sat_crs, cmap="gray",
-          norm=PowerNorm(gamma=0.55, vmin=0.0, vmax=1.1), interpolation="nearest",
-          regrid_shape=1200, alpha=0.85, zorder=1)
-
-xrds_sat.close()
-try:
-    os.remove(sat_file)
-    print(f"    GOES TEMP FILE REMOVED.....{os.path.basename(sat_file)}")
-except OSError as e:
-    print(f"    WARNING: Could not remove GOES temp file: {e}")
+if visible is not None:
+    ax.imshow(visible.values, origin="upper", extent=sat_extent, transform=sat_crs, cmap="gray",
+              norm=PowerNorm(gamma=0.55, vmin=0.0, vmax=1.1), interpolation="nearest",
+              regrid_shape=1200, alpha=0.85, zorder=1)
 
 
 
@@ -250,7 +270,7 @@ figure_builder(fig, ax,
     cbar_title="Reflectivity",
     cbar_units="dBz",
     cbar_ticks=np.arange(-30, 100, 5),
-    footer_left=f"RAP 13km  •  INIT {valid_date[0:10]} {valid_date[11:-13]}z  •  {metar_time[11:16]}z METARs, {valid_time}z WPC Fronts, {str(radar_time)[11:16]}z Reflectivity Mosaic, {sat_time_str} {sat_type}",
+    footer_left=f"RAP 13km  •  INIT {valid_date[0:10]} {valid_date[11:-13]}z  •  {metar_time[11:16] + 'z' if metar_time else 'NO'} METARs, {valid_time}z WPC Fronts, {str(radar_time)[11:16]}z Reflectivity Mosaic, {sat_time_str} {sat_type}",
     footer_right=' ',
     save_path=composite_filename)
 

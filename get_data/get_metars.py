@@ -4,6 +4,7 @@
 ##########################################################
 
 import warnings
+import socket
 warnings.filterwarnings("ignore")
 
 from datetime import datetime, timedelta
@@ -16,6 +17,9 @@ from metpy.units import units
 import pandas as pd
 import cartopy.crs as ccrs
 
+
+# seconds to wait on a stalled EDEX connection before giving up
+EDEX_TIMEOUT = 60
 
 ### METAR OBSERVATIONS ###
 #########################################################################################################
@@ -53,8 +57,14 @@ def get_metar_data(date=datetime.utcnow(), reduced_to=100000):
     endRange = datetime.strptime(start + ":59:59", "%Y-%m-%d %H:%M:%S")
     timerange = TimeRange(beginRange, endRange)
 
-    # Get response
-    response = DataAccessLayer.getGeometryData(request, timerange)
+    # Get response. python-awips opens its EDEX connection with no timeout, so a stalled
+    # server would hang the job forever; use a socket timeout for this request only
+    previous_timeout = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(EDEX_TIMEOUT)
+    try:
+        response = DataAccessLayer.getGeometryData(request, timerange)
+    finally:
+        socket.setdefaulttimeout(previous_timeout)
 
     # define a dictionary and array that will be populated from our for loop below
     obs = dict({params: [] for params in params})

@@ -50,7 +50,7 @@ FIRE_LEGEND = [ ("#E69800", "ELV"),  ("#FF0000", "CRT"), ("#E600A9", "EXT"), ("#
 
 ERO_COLORS = {1: "#38A800", 2: "#FFFE00", 3: "#F50000", 4: "#FF69C5"}
 ERO_DN = [1, 2, 3, 4]
-ERO_LABELS = ["MGRL\n5%+", "SLGT\n15%+", "MDT\n40%+", "HIGHT\n70%+"]
+ERO_LABELS = ["MRGL\n5%+", "SLGT\n15%+", "MDT\n40%+", "HIGH\n70%+"]
 
 CPC_TEMP_LEGEND = [
     (("Above", 90), "#702100", "Abv\n90%"),
@@ -518,7 +518,12 @@ if outlook is not None:
     fig, ax = map_builder(extent=CONUS_EXTENT, terrain=True, counties=True, county_alpha=0.9)
 
     for (cat, prob), color, label in CPC_TEMP_LEGEND:
-        data = outlook[(outlook["cat"].astype(str).str.lower() == cat.lower()) & (outlook["prob"].astype(float).round().astype(int) == prob)]
+        cat_match = outlook["cat"].astype(str).str.lower() == cat.lower()
+        if cat == "Normal":
+            # near-normal is one color at any probability (CPC issues it at 33-50%, not only 36%)
+            data = outlook[cat_match]
+        else:
+            data = outlook[cat_match & (outlook["prob"].astype(float).round().astype(int) == prob)]
 
         if data.empty:
             continue
@@ -573,7 +578,12 @@ if outlook is not None:
     fig, ax = map_builder(extent=CONUS_EXTENT, terrain=True, counties=True, county_alpha=0.9)
 
     for (cat, prob), color, label in CPC_PRCP_LEGEND:
-        data = outlook[(outlook["cat"].astype(str).str.lower() == cat.lower()) & (outlook["prob"].astype(float).round().astype(int) == prob)]
+        cat_match = outlook["cat"].astype(str).str.lower() == cat.lower()
+        if cat == "Normal":
+            # near-normal is one color at any probability (CPC issues it at 33-50%, not only 36%)
+            data = outlook[cat_match]
+        else:
+            data = outlook[cat_match & (outlook["prob"].astype(float).round().astype(int) == prob)]
 
         if data.empty:
             continue

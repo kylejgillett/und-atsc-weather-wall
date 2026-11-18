@@ -618,8 +618,12 @@ def get_us_drought_monitor():
     # Use the NDMC current GeoJSON directly. This is the same source used by
     # the older plotting workflow and avoids the multipart/date-line behavior
     # seen in some ArcGIS representations of the product.
+    # fetch through SESSION (with a timeout) rather than letting read_file open the URL,
+    # which has no timeout and could hang the job on a stalled connection
     try:
-        outlook = geopandas.read_file(USDM_CURRENT)
+        response = SESSION.get(USDM_CURRENT, timeout=30)
+        response.raise_for_status()
+        outlook = geopandas.read_file(io.BytesIO(response.content))
     except Exception as e:
         print(f'    U.S. DROUGHT MONITOR FAILED -- {e}')
         return None
